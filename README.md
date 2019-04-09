@@ -6,11 +6,16 @@ This script doesn't include preprocess (segment wave files, tanscriptions, and w
 ## TODO
 
 - preprocess
+- zoneout
+- shallow fusion
+- real-time version
 
 ## Requirements
 
-Python >= 3.6
+Python >= 3.6  
 PyTorch >= 0.4
+
+We reccomend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/).
 
 ## Quick Start
 

@@ -9,9 +9,10 @@ import hparams as hp
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def log_config():
+    print(hp.__dict__.keys())
     for key in hp.__dict__.keys():
         if not '__' in key:
-            print('{} {}'.format(key, eval(hp+'.'+key)))
+            print('{} = {}'.format(key, eval('hp.'+key)))
 
 def load_dat(filename):
     """

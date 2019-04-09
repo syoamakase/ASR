@@ -9,6 +9,9 @@ from torch.autograd import Variable
 import hparams as hp
 
 class Attention(nn.Module):
+    """
+    Attention mechanism based on content-based model
+    """
     def __init__(self, mode='conv'):
         super(Attention, self).__init__()
         # only 'conv'
@@ -33,8 +36,6 @@ class Attention(nn.Module):
         e = torch.tanh(self.L_se(s).unsqueeze(1) + self.L_he(hbatch) + tmpconv)
         # BxT
         e = self.L_ee(e)
-
-        # e_nonlin : batch_size x num_frames
         e_nonlin = (e - e.max(1)[0].unsqueeze(1)).exp()
         # e_nonlin : batch_size x num_frames
         e_nonlin = e_nonlin * e_mask

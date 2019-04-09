@@ -22,7 +22,8 @@ class Model(nn.Module):
             input_size = hp.lmfb_dim * hp.frame_stacking
         else:
             input_size = hp.lmfb_dim
-        self.bi_lstm = nn.LSTM(input_size=input_size, hidden_size=hp.num_hidden_nodes, num_layers=hp.num_encoder_layer, batch_first=True, dropout=0.2, bidirectional=True)
+        self.bi_lstm = nn.LSTM(input_size=input_size, hidden_size=hp.num_hidden_nodes, num_layers=hp.num_encoder_layer, 
+                                batch_first=True, dropout=hp.encoder_dropout, bidirectional=True)
         # attention
         self.L_se = nn.Linear(hp.num_hidden_nodes, hp.num_hidden_nodes * 2, bias=False)
         self.L_he = nn.Linear(hp.num_hidden_nodes * 2, hp.num_hidden_nodes * 2)
@@ -94,7 +95,7 @@ class Model(nn.Module):
             rec_input = self.L_ys(target[:,step,:]) + self.L_ss(s) + self.L_gs(g)
             s, c = self._func_lstm(rec_input, c)
 
-            youtput[:,step] = y
+            youtput[:, step] = y
 
         return youtput
     
@@ -117,7 +118,6 @@ class Model(nn.Module):
 
         for _ in range(hp.max_decoder_seq_len):
             token_beam_all = []
-
             for current_token in token_beam_sel:
                 cand_seq, cand_bottle, cand_seq_score, (c, s, alpha) = current_token
                 

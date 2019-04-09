@@ -2,9 +2,9 @@
 import copy
 import glob
 import itertools
+import numpy as np
 import os
 import sys
-import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -85,20 +85,18 @@ def train_epoch(model, optimizer, train_set, scheduler=None):
     print("EPOCH {} end".format(epoch+1))
 
 if __name__ == "__main__":
+    log_config()
     if hp.legacy:
-        model = Model().to(DEVICE)
+        model = Model()
     else:
-        model = AttModel().to(DEVICE)
+        model = AttModel()
+
     if torch.cuda.device_count() > 1:
         # multi-gpu configuration
         ngpu = torch.cuda.device_count()
         device_ids = list(range(ngpu))
         model = torch.nn.DataParallel(model, device_ids)
-        model.to(DEVICE)
-        print("multi gpu")
-    else:
-        print("single")
-        model.to(DEVICE)
+    model.to(DEVICE)        
     
     optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
     os.makedirs(hp.save_dir, exist_ok=True)
