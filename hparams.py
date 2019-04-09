@@ -36,3 +36,6 @@ score_func = 'log_softmax' # or 'logit' or 'softmax'
 
 # for previous version
 legacy = False
+
+# others
+debug_mode = 'print' # or visdom

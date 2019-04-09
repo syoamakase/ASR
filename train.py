@@ -15,6 +15,9 @@ from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_m
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
 
+# from visdom import Visdom
+# viz = Visdom()
+
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train_loop(model, optimizer, train_set, scheduler=None):
@@ -67,11 +70,12 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         youtput_in_Variable = model(xs, lengths, ts_onehot)
 
         loss = 0.0
-        for i in range(hp.batch_size):
-            num_labels = ts[i].size(0)
-            loss += label_smoothing_loss(youtput_in_Variable[i][:num_labels], ts_onehot_LS[i][:num_labels]) / num_labels
+        for k in range(hp.batch_size):
+            num_labels = ts[k].size(0)
+            loss += label_smoothing_loss(youtput_in_Variable[k][:num_labels], ts_onehot_LS[k][:num_labels]) / num_labels
 
         print('loss = {}'.format(loss.item()))
+        # viz.line(X=np.array([i]), Y=np.array([loss.item()]), win='loss', name='train_loss', update='append')
         sys.stdout.flush()
         optimizer.zero_grad()
         # backward
