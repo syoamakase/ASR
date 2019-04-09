@@ -3,8 +3,8 @@
 train_script = '/n/rd23/ueno/e2e/data/aps/script.word.sort_xlen.shorter_than_12s'
 save_dir = 'checkpoints'
 
-load_checkpoints = False #False # you must use only train.py if you want to load the saved model
-load_checkpoints_path = None # or path
+load_checkpoints = True # you must use only train.py if you want to load the saved model
+load_checkpoints_path = '/n/rd26/ueno/e2e/trial_exp/Class_Balanced_Loss/model.word.mb40_LS_APS_ClassBlancedLoss_beta0.9'#None # or path
 load_checkpoints_epoch = None #None
 
 test_script = '/n/rd32/mimura/e2e/data/original/feature/eval/script.eval1'
@@ -35,4 +35,4 @@ if shallow_fusion:
 score_func = 'log_softmax' # or 'logit' or 'softmax'
 
 # for previous version
-legacy = False
+legacy = True 

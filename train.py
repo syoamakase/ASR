@@ -105,12 +105,12 @@ if __name__ == "__main__":
 
     if hp.load_checkpoints:
         if hp.load_checkpoints_epoch is None:
-            path_list = glob.glob(hp.load_checkpoints_path, 'network.epoch*')
+            path_list = glob.glob(os.path.join(hp.load_checkpoints_path, 'network.epoch*'))
             load_epoch = 1
             for path in path_list:
                 epoch = int(path.split('.')[-1].replace('epoch', ''))
-                if load_epoch > load_epoch:
-                    load_epoch = load_epoch
+                if epoch > load_epoch:
+                    load_epoch = epoch
         else:
             load_epoch = hp.load_checkpoints_epoch
         print("{} epoch {} load".format(hp.load_checkpoints_path, load_epoch))

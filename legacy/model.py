@@ -51,7 +51,7 @@ class Model(nn.Module):
         # hbatch : hp.batch_size x num_frames x hp.num_hidden_nodes
         # lengths : hp.batch_size lengths array
         # target:  hp.batch_size x **num_labels** x hp.num_classes
-        batch_size = 1
+        batch_size = hbatch.size(0)
         num_frames = hbatch.size(1)
         num_labels = target.size(1)
 
@@ -113,7 +113,7 @@ class Model(nn.Module):
 
         for i, tmp in enumerate(lengths):
             if tmp < num_frames:
-                e_mask[i, tmp] = 0.0
+                e_mask[i, tmp:] = 0.0
 
         for _ in range(hp.max_decoder_seq_len):
             token_beam_all = []
