@@ -40,15 +40,20 @@ def train_loop(model, optimizer, train_set, scheduler=None):
             x_file, laborg = s.split(' ', 1)
             if '.htk' in x_file:
                 cpudat = load_dat(x_file)
-                cpudat = cpudat[:, :40]
+                cpudat = cpudat[:, :hp.lmfb_dim]
             elif '.npy'in x_file:
                 cpudat = np.load(x_file)
 
             print("{} {}".format(x_file, cpudat.shape[0]))
-            if (hp.frame_stacking is not None) or hp.frame_stacking == 1:
+            if hp.frame_stacking > 1:
                 cpudat, newlen = frame_stacking(cpudat, hp.frame_stacking)
-            else:
-                newlen = cpudat.shape[0]
+
+            newlen = cpudat.shape[0]
+            if hp.encoder_type == 'CNN':
+                cpudat_split = np.split(cpudat, 3, axis = 1)
+                cpudat = np.hstack((cpudat_split[0].reshape(newlen, 1, 80),
+                            cpudat_split[1].reshape(newlen, 1, 80), cpudat_split[2].reshape(newlen, 1, 80)))
+            newlen = cpudat.shape[0]
             lengths.append(newlen)
             xs.append(cpudat)
             cpulab = np.array([int(i) for i in laborg.split(' ')], dtype=np.int32)
@@ -77,12 +82,12 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         optimizer.step()
         loss.detach()
 
-def train_epoch(model, optimizer, train_set, scheduler=None):
-    for epoch in range(hp.max_epoch+1):
+def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
+    for epoch in range(start_epoch, hp.max_epoch+1):
         train_loop(model, optimizer, train_set, scheduler)
-    torch.save(model.state_dict(), hp.save_dir+"/network.epoch{}".format(epoch+1))
-    torch.save(optimizer.state_dict(), hp.save_dir+"/network.optimizer.epoch{}".format(epoch+1))
-    print("EPOCH {} end".format(epoch+1))
+        torch.save(model.state_dict(), hp.save_dir+"/network.epoch{}".format(epoch+1))
+        torch.save(optimizer.state_dict(), hp.save_dir+"/network.optimizer.epoch{}".format(epoch+1))
+        print("EPOCH {} end".format(epoch+1))
 
 if __name__ == "__main__":
     log_config()
@@ -101,10 +106,10 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
     os.makedirs(hp.save_dir, exist_ok=True)
 
+    load_epoch = 0
     if hp.load_checkpoints:
         if hp.load_checkpoints_epoch is None:
             path_list = glob.glob(os.path.join(hp.load_checkpoints_path, 'network.epoch*'))
-            load_epoch = 1
             for path in path_list:
                 epoch = int(path.split('.')[-1].replace('epoch', ''))
                 if epoch > load_epoch:
@@ -120,4 +125,4 @@ if __name__ == "__main__":
         for line in f:
             train_set.append(line)
 
-    train_epoch(model, optimizer, train_set)
+    train_epoch(model, optimizer, train_set, start_epoch=load_epoch)

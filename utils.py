@@ -9,7 +9,6 @@ import hparams as hp
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def log_config():
-    print(hp.__dict__.keys())
     for key in hp.__dict__.keys():
         if not '__' in key:
             print('{} = {}'.format(key, eval('hp.'+key)))
@@ -89,10 +88,15 @@ def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths
     input_size = hp.lmfb_dim * hp.frame_stacking if frame_stacking else hp.lmfb_dim
  
     if (ts is not None) and (ts_lengths is not None) and (ts_onehot_LS is not None):
-        xs_tensor = torch.zeros((hp.batch_size, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
+        if hp.encoder_type == 'CNN':
+            xs_tensor = torch.zeros((hp.batch_size, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
+        else:
+            xs_tensor = torch.zeros((hp.batch_size, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
         ts_maxlen = max(ts_lengths)
-        ts_onehot_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32, device=DEVICE, requires_grad=True)
-        ts_onehot_LS_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32, device=DEVICE, requires_grad=True)
+        ts_onehot_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32,
+                                device=DEVICE, requires_grad=True)
+        ts_onehot_LS_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32,
+                                device=DEVICE, requires_grad=True)
         lengths_tensor = torch.zeros((hp.batch_size), dtype=torch.int64, device=DEVICE)
         ts_result = []
         for i, i_sort in enumerate(arg_lengths):
@@ -103,7 +107,10 @@ def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths
             lengths_tensor.data[i] = lengths[i_sort] 
         return xs_tensor, lengths_tensor, ts_result, ts_onehot_tensor, ts_onehot_LS_tensor
     else:
-        xs_tensor = torch.zeros((1, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
+        if hp.encoder_type == 'CNN':
+            xs_tensor = torch.zeros((1, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
+        else:
+            xs_tensor = torch.zeros((1, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
         lengths_tensor = torch.zeros((1), dtype=torch.int64, device=DEVICE)
         for i, i_sort in enumerate(arg_lengths):
             xs_tensor.data[i, 0:lengths[i_sort]] = torch.from_numpy(xs[i_sort])

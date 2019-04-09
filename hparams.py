@@ -19,6 +19,7 @@ frame_stacking = 3
 num_hidden_nodes = 320
 num_encoder_layer = 5
 encoder_dropout = 0.2
+encoder_type = None # 'CNN'
 
 # trainig setting
 batch_size = 40

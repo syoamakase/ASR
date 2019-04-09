@@ -7,14 +7,17 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 from Models.decoder import Decoder
-from Models.encoder import Encoder
+from Models.encoder import Encoder, CNN_Encoder
 
 import hparams as hp
 
 class AttModel(nn.Module):
     def __init__(self):
         super(AttModel, self).__init__()
-        self.encoder = Encoder()
+        if hp.encoder_type == 'CNN':
+            self.encoder = CNN_Encoder()
+        else:
+            self.encoder = Encoder()
         self.decoder = Decoder()
 
     def forward(self, x, lengths, targets):

@@ -33,3 +33,4 @@ You can use previous version's model when you specify `legacy = True` in hparams
 
 ## Reference
 
+ [1] Jan Chorowski, Dzmitry Bahdanau, Dmitriy Serdyuk,Kyunghyun Cho, and Yoshua Bengio, “Attention-based models for speech recognition,” inAdvances in Neural InformationProcessing Systems (NIPS), 2015, pp.577–585.

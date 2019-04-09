@@ -10,7 +10,7 @@ import hparams as hp
 
 class Attention(nn.Module):
     """
-    Attention mechanism based on content-based model
+    Attention mechanism based on content-based model [Chorowski+, 2015]
     """
     def __init__(self, mode='conv'):
         super(Attention, self).__init__()
