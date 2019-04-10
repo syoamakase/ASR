@@ -28,6 +28,6 @@ class AttModel(nn.Module):
     
     def decode(self, x, lengths):
         hbatch = self.encoder(x, lengths)
-        results = self.decoder(hbatch, lengths)
+        results = self.decoder.decode(hbatch, lengths)
 
         return results
