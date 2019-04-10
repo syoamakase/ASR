@@ -56,15 +56,15 @@ class Decoder(nn.Module):
     def decode(self, hbatch, lengths):
         batch_size = hbatch.size(0)
         num_frames = hbatch.size(1)
-        e_mask = torch.ones((batch_size, num_frames), device=DEVICE, requires_grad=False)
+        e_mask = torch.ones((batch_size, num_frames, 1), device=DEVICE, requires_grad=False)
 
         token_beam_sel = [([], [], 0.0, (torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
                         torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
-                        torch.zeros((batch_size, num_frames), device=DEVICE, requires_grad=False)))]
+                        torch.zeros((batch_size, 1, num_frames), device=DEVICE, requires_grad=False)))]
 
         for i, tmp in enumerate(lengths):
             if tmp < num_frames:
-                e_mask[i, tmp] = 0.0
+                e_mask[i, tmp:] = 0.0
 
         for _ in range(hp.max_decoder_seq_len):
             token_beam_all = []
@@ -77,7 +77,7 @@ class Decoder(nn.Module):
                 else:
                     tmp_bottle = cand_bottle
 
-                g, alpha = self.att(s, hbatch, alpha)
+                g, alpha = self.att(s, hbatch, alpha, e_mask)
                 
                 # generate
                 y = self.L_yy(torch.tanh(self.L_gy(g) + self.L_sy(s)))

@@ -14,7 +14,7 @@ This script doesn't include preprocess (segment wave files, tanscriptions, and w
 ## Requirements
 
 Python >= 3.6.0  
-PyTorch >= 0.4
+PyTorch >= 1.0
 
 We reccomend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/).
 
@@ -31,6 +31,11 @@ We reccomend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/)
 ### Test
 
 `python test.py`
+
+
+## Notice
+
+- When `debug_mode = 'visdom'` and you use a remote server, specify a visdom server's ip address in `viz = Visdom()` of train.py ex) `viz = Visdom('192.168.0.2')`
 
 ## For previous version developers
 
