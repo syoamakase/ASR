@@ -16,7 +16,7 @@ This script doesn't include preprocess (segment wave files, tanscriptions, and w
 Python >= 3.6.0  
 PyTorch >= 1.0
 
-We reccomend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/).
+We recommend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/).
 
 ## Quick Start
 
@@ -32,10 +32,21 @@ We reccomend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/)
 
 `python test.py`
 
+## File Format
+
+### Train
+
+`<file name> <label sequence (int)>`  
+file1.npy 1 2 3 4
+
+### Test
+
+`<file name>`
 
 ## Notice
 
-- When `debug_mode = 'visdom'` and you use a remote server, specify a visdom server's ip address in `viz = Visdom()` of train.py ex) `viz = Visdom('192.168.0.2')`
+- When `debug_mode = 'visdom'` and you use a remote server, specify a visdom server's ip address in `viz = Visdom()` of train.py 
+  ex) `viz = Visdom('192.168.0.2')`
 
 ## For previous version developers
 
@@ -43,4 +54,4 @@ You can use previous version's model when you specify `legacy = True` in hparams
 
 ## Reference
 
- [1] Jan Chorowski, Dzmitry Bahdanau, Dmitriy Serdyuk,Kyunghyun Cho, and Yoshua Bengio, “Attention-based models for speech recognition,” inAdvances in Neural InformationProcessing Systems (NIPS), 2015, pp.577–585.
+ [1] Jan Chorowski, Dzmitry Bahdanau, Dmitriy Serdyuk, Kyunghyun Cho, and Yoshua Bengio, “Attention-based models for speech recognition,” inAdvances in Neural InformationProcessing Systems (NIPS), 2015, pp.577–585.

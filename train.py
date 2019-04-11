@@ -15,8 +15,8 @@ from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_m
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
 
-# from visdom import Visdom
-# viz = Visdom()
+from visdom import Visdom
+viz = Visdom()
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -47,7 +47,8 @@ def train_loop(model, optimizer, train_set, scheduler=None):
             elif '.npy'in x_file:
                 cpudat = np.load(x_file)
 
-            print("{} {}".format(x_file, cpudat.shape[0]))
+            if hp.debug_mode == 'print':
+                print("{} {}".format(x_file, cpudat.shape[0]))
             if hp.frame_stacking > 1:
                 cpudat, newlen = frame_stacking(cpudat, hp.frame_stacking)
 
@@ -74,8 +75,11 @@ def train_loop(model, optimizer, train_set, scheduler=None):
             num_labels = ts[k].size(0)
             loss += label_smoothing_loss(youtput_in_Variable[k][:num_labels], ts_onehot_LS[k][:num_labels]) / num_labels
 
-        print('loss = {}'.format(loss.item()))
-        # viz.line(X=np.array([i]), Y=np.array([loss.item()]), win='loss', name='train_loss', update='append')
+        if hp.debug_mode == 'visdom':
+            viz.line(X=np.array([i]), Y=np.array([loss.item()]), win='loss', name='train_loss', update='append')
+        else:
+            print('loss = {}'.format(loss.item()))
+
         sys.stdout.flush()
         optimizer.zero_grad()
         # backward
