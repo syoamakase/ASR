@@ -22,8 +22,8 @@ encoder_dropout = 0.2
 encoder_type = None # 'CNN'
 
 # trainig setting
-batch_size = 25
-max_epoch = 40
+batch_size = 40 
+max_epoch = 50
 
 # inference config
 max_decoder_seq_len = 200

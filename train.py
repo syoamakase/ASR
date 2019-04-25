@@ -15,8 +15,12 @@ from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_m
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
 
-from visdom import Visdom
-viz = Visdom()
+try:
+    from visdom import Visdom
+    viz = Visdom()
+except:
+    if hp.debug_mode == 'visdom':
+        raise ModuleNotFoundError
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

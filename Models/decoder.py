@@ -114,7 +114,8 @@ class Decoder(nn.Module):
                 break
         return results
     
-    def _func_lstm(self, x, c):
+    @staticmethod
+    def _func_lstm(x, c):
         ingate, forgetgate, cellgate, outgate = x.chunk(4, 1)
         half = 0.5
         ingate = torch.tanh(ingate * half) * half + half
