@@ -58,7 +58,7 @@ class Decoder(nn.Module):
         num_frames = hbatch.size(1)
         e_mask = torch.ones((batch_size, num_frames, 1), device=DEVICE, requires_grad=False)
 
-        token_beam_sel = [([], [], 0.0, (torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
+        token_beam_sel = [([], 0.0, (torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
                         torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
                         torch.zeros((batch_size, 1, num_frames), device=DEVICE, requires_grad=False)))]
 
@@ -70,19 +70,17 @@ class Decoder(nn.Module):
             token_beam_all = []
 
             for current_token in token_beam_sel:
-                cand_seq, cand_bottle, cand_seq_score, (c, s, alpha) = current_token
+                cand_seq, cand_seq_score, (c, s, alpha) = current_token
                 
-                if len(cand_bottle) != 0:
-                    tmp_bottle = copy.deepcopy(cand_bottle)
-                else:
-                    tmp_bottle = cand_bottle
+                # if len(cand_bottle) != 0:
+                #     tmp_bottle = copy.deepcopy(cand_bottle)
+                # else:
+                #     tmp_bottle = cand_bottle
 
                 g, alpha = self.att(s, hbatch, alpha, e_mask)
                 
                 # generate
                 y = self.L_yy(torch.tanh(self.L_gy(g) + self.L_sy(s)))
-                bottle_feats = torch.tanh(self.L_gy(g) + self.L_sy(s)).detach().cpu().numpy()
-                tmp_bottle.append(bottle_feats)
 
                 if hp.score_func == 'log_softmax':
                     y = F.log_softmax(y, dim=1)
@@ -104,8 +102,8 @@ class Decoder(nn.Module):
                     rec_input = self.L_ys(target_for_t_estimated) + self.L_ss(s) + self.L_gs(g)
                     tmps, tmpc = self._func_lstm(rec_input, c)
 
-                    token_beam_all.append((tmpseq, tmp_bottle, tmpscore, (tmpc, tmps, alpha)))
-            sorted_token_beam_all = sorted(token_beam_all, key=itemgetter(2), reverse=True)
+                    token_beam_all.append((tmpseq, tmpscore, (tmpc, tmps, alpha)))
+            sorted_token_beam_all = sorted(token_beam_all, key=itemgetter(1), reverse=True)
             token_beam_sel = sorted_token_beam_all[:hp.beam_width]
             results = []
             if token_beam_sel[0][0][-1] == hp.eos_id:
@@ -124,4 +122,4 @@ class Decoder(nn.Module):
         outgate = torch.tanh(outgate * half) * half + half
         c_next = (forgetgate * c) + (ingate * cellgate)
         h = outgate * torch.tanh(c_next)
-        return h, c
+        return h, c_next

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import copy
 import itertools
 import os
@@ -50,12 +51,19 @@ if __name__ == "__main__":
     else:
         model = AttModel().to(DEVICE)
 
+    parser = argparse.ArgumentParser()
+    #parser.add_argument('--load_model', default=hp.load_checkpoints_path+'/network.epoch{}'.format(hp.load_checkpoints_epoch))
+    parser.add_argument('--load_name')
+    args = parser.parse_args()
+    load_name = args.load_name
+
     test_set = []
     with open(hp.test_script) as f:
         for line in f:
             test_set.append(line)
     
-    assert hp.load_checkpoints, 'Please specify the checkpoints'
+    #assert hp.load_checkpoints, 'Please specify the checkpoints'
 
-    model.load_state_dict(load_model(os.path.join(hp.load_checkpoints_path, 'network.epoch{}'.format(hp.load_checkpoints_epoch))))
+    #model.load_state_dict(load_model(os.path.join(hp.load_checkpoints_path, 'network.epoch{}'.format(hp.load_checkpoints_epoch))))
+    model.load_state_dict(load_model(load_name))
     test_loop(model, test_set)

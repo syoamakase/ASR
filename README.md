@@ -46,7 +46,7 @@ file1.npy
 
 ## Notice
 
-- When `debug_mode = 'visdom'` and you use a remote server, specify a visdom server's ip address in `viz = Visdom()` of train.py 
+- When `debug_mode = 'visdom'` and you use a remote server, specify a visdom server's ip address in `viz = Visdom()` of train.py  
   ex) `viz = Visdom('192.168.0.2')`
 
 
