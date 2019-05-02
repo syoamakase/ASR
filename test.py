@@ -64,6 +64,6 @@ if __name__ == "__main__":
     
     #assert hp.load_checkpoints, 'Please specify the checkpoints'
 
-    #model.load_state_dict(load_model(os.path.join(hp.load_checkpoints_path, 'network.epoch{}'.format(hp.load_checkpoints_epoch))))
+
     model.load_state_dict(load_model(load_name))
     test_loop(model, test_set)
