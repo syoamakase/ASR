@@ -63,7 +63,7 @@ if __name__ == "__main__":
             test_set.append(line)
     
     #assert hp.load_checkpoints, 'Please specify the checkpoints'
-
+    # consider load methods
 
     model.load_state_dict(load_model(load_name))
     test_loop(model, test_set)
