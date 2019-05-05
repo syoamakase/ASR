@@ -11,7 +11,7 @@ import torch.nn as nn
 
 import hparams as hp
 from Models.AttModel import AttModel
-from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model
+from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, init_weight
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
 
@@ -93,6 +93,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         # optimizer update
         optimizer.step()
         loss.detach()
+        torch.cuda.empty_cache()
 
 def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
     for epoch in range(start_epoch, hp.max_epoch+1):
@@ -107,6 +108,8 @@ if __name__ == "__main__":
         model = Model()
     else:
         model = AttModel()
+    
+    model.apply(init_weight)
 
     if torch.cuda.device_count() > 1:
         # multi-gpu configuration

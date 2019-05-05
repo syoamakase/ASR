@@ -3,6 +3,7 @@ import numpy as np
 from struct import unpack, pack
 import sys
 import torch
+import torch.nn as nn
 
 import hparams as hp
 
@@ -140,3 +141,25 @@ def load_model(model_file):
     else:
         print('ERROR in load model')
         sys.exit(1)
+
+def init_weight(m):
+    """ 
+    To initialize weights and biases.
+    """
+    classname = m.__class__.__name__
+    if classname.find('Linear') != -1: 
+        m.weight.data.uniform_(-0.1, 0.1)
+        if isinstance(m.bias, nn.parameter.Parameter):
+            m.bias.data.fill_(0)
+
+    if classname.find('LSTM') != -1: 
+        for name, param in m.named_parameters():
+            if 'weight' in name:
+                nn.init.kaiming_normal_(param.data)
+            if 'bias' in name:
+                param.data.fill_(0)
+
+    if classname.find('Conv1d') != -1: 
+        nn.init.kaiming_normal_(m.weight.data)
+        if isinstance(m.bias, nn.parameter.Parameter):
+            m.bias.data.fill_(0)
