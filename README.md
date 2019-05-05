@@ -51,12 +51,14 @@ file1.npy
 
 ## CSJ
 
-Table.1 Word error rate (WER[%]) on CSJ corpus.
+Table 1 Word error rate (WER[%]) on CSJ corpus.  
 First rows mean training corpus and first columns mean test set.
+We trained 40 epochs and chose minimum WER from 40 epochs model.
+**BOLD** means latest results using this repository (others come from legacy model).
 
-|            |#vocab | CSJ-APS|CSJ-SPS|
+|            |#vocab |CSJ-APS|CSJ-SPS|
 |------------|------:|------:|------:|
-|CSJ-APS     |19146  |12.10  |19.22  |
+|CSJ-APS     |19146  |**11.91**|19.22  |
 |CSJ-SPS     |24826  |23.30  |9.69   |
 |CSJ-APS+SPS |34331  |10.30  |9.06   |
 
