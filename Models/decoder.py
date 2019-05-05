@@ -71,11 +71,6 @@ class Decoder(nn.Module):
 
             for current_token in token_beam_sel:
                 cand_seq, cand_seq_score, (c, s, alpha) = current_token
-                
-                # if len(cand_bottle) != 0:
-                #     tmp_bottle = copy.deepcopy(cand_bottle)
-                # else:
-                #     tmp_bottle = cand_bottle
 
                 g, alpha = self.att(s, hbatch, alpha, e_mask)
                 

@@ -51,6 +51,7 @@ if __name__ == "__main__":
     else:
         model = AttModel().to(DEVICE)
 
+    model.eval()
     parser = argparse.ArgumentParser()
     #parser.add_argument('--load_model', default=hp.load_checkpoints_path+'/network.epoch{}'.format(hp.load_checkpoints_epoch))
     parser.add_argument('--load_name')

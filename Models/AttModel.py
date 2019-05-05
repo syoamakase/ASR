@@ -27,7 +27,8 @@ class AttModel(nn.Module):
         return youtput
     
     def decode(self, x, lengths):
-        hbatch = self.encoder(x, lengths)
-        results = self.decoder.decode(hbatch, lengths)
+        with torch.no_grad():
+            hbatch = self.encoder(x, lengths)
+            results = self.decoder.decode(hbatch, lengths)
 
         return results

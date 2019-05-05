@@ -21,8 +21,8 @@ num_encoder_layer = 5
 encoder_dropout = 0.2
 encoder_type = None # 'CNN'
 
-# trainig setting
-batch_size = 40 
+# training setting
+batch_size = 40
 max_epoch = 50
 
 # inference config

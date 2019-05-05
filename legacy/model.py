@@ -186,4 +186,4 @@ class Model(nn.Module):
         outgate = torch.tanh(outgate * half) * half + half
         c_next = (forgetgate * c) + (ingate * cellgate)
         h = outgate * torch.tanh(c_next)
-        return h, c
+        return h, c_next

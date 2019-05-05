@@ -1,8 +1,5 @@
-## Sequence-to-sequence speech recognition toolkit
-
 This is sequence-to-sequence speech recognition toolkit.
 This script doesn't include preprocess (segment wave files, tanscriptions, and word labels).
-
 ## TODO
 
 - preprocess (CSJ, Librispeech)
