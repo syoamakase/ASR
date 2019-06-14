@@ -11,6 +11,7 @@ import torch.nn as nn
 
 import hparams as hp
 from Models.AttModel import AttModel
+from Models.CTCModel import CTCModel
 from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, init_weight
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
@@ -65,19 +66,25 @@ def train_loop(model, optimizer, train_set, scheduler=None):
             lengths.append(newlen)
             xs.append(cpudat)
             cpulab = np.array([int(i) for i in laborg.split(' ')], dtype=np.int32)
+
             cpulab_onehot = onehot(cpulab, hp.num_classes)
             ts.append(cpulab)
             ts_lengths.append(len(cpulab))
             ts_onehot.append(cpulab_onehot)
-            ts_onehot_LS.append(0.9 * onehot(cpulab, hp.num_classes) + 0.1 * 1.0 / hp.num_classes)
+            ts_onehot_LS.append(0.9 * cpulab_onehot + 0.1 * 1.0 / hp.num_classes)
 
-        xs, lengths, ts, ts_onehot, ts_onehot_LS = sort_pad(xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths)
+        xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths = sort_pad(xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths)
+        
         youtput_in_Variable = model(xs, lengths, ts_onehot)
 
         loss = 0.0
-        for k in range(hp.batch_size):
-            num_labels = ts[k].size(0)
-            loss += label_smoothing_loss(youtput_in_Variable[k][:num_labels], ts_onehot_LS[k][:num_labels]) / num_labels
+        if hp.decoder_type == 'Attention':
+            for k in range(hp.batch_size):
+                num_labels = ts[k].size(0)
+                loss += label_smoothing_loss(youtput_in_Variable[k][:num_labels], ts_onehot_LS[k][:num_labels]) / num_labels
+        elif hp.decoder_type == 'CTC':
+            youtput_in_Variable = F.log_softmax(youtput_in_Variable, dim=2).transpose(0, 1)
+            loss = F.ctc_loss(youtput_in_Variable, ts, lengths, ts_lengths, blank=hp.num_classes)
 
         if hp.debug_mode == 'visdom':
             viz.line(X=np.array([i]), Y=np.array([loss.item()]), win='loss', name='train_loss', update='append')
@@ -107,8 +114,11 @@ if __name__ == "__main__":
     if hp.legacy:
         model = Model()
     else:
-        model = AttModel()
-    
+        if hp.decoder_type == 'Attention':
+            model = AttModel()
+        elif hp.decoder_type == 'CTC':
+            model = CTCModel()
+     
     model.apply(init_weight)
 
     if torch.cuda.device_count() > 1:

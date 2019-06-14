@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import numpy as np
 from struct import unpack, pack
 import sys
@@ -42,6 +43,7 @@ def frame_stacking(cpudat, stack):
     cpudat = cpudat[:stack * newlen, :]
     cpudat = np.reshape(cpudat, (newlen, stack, hp.lmfb_dim))
     cpudat = np.reshape(cpudat, (newlen, stack * hp.lmfb_dim)).astype(np.float32)
+    
     return cpudat, newlen
 
 def onehot(labels, num_output):
@@ -99,14 +101,16 @@ def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths
         ts_onehot_LS_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32,
                                 device=DEVICE, requires_grad=True)
         lengths_tensor = torch.zeros((hp.batch_size), dtype=torch.int64, device=DEVICE)
+        ts_lengths_new = copy.deepcopy(ts_lengths)
         ts_result = []
         for i, i_sort in enumerate(arg_lengths):
             xs_tensor.data[i, 0:lengths[i_sort]] = torch.from_numpy(xs[i_sort])
             ts_onehot_tensor.data[i, 0:ts_lengths[i_sort]] = torch.from_numpy(ts_onehot[i_sort])
             ts_onehot_LS_tensor.data[i, 0:ts_lengths[i_sort]] = torch.from_numpy(ts_onehot_LS[i_sort])
-            ts_result.append(torch.tensor(ts[i_sort], dtype=torch.long, device=DEVICE))
+            ts_result.extend(list(ts[i_sort]))
             lengths_tensor.data[i] = lengths[i_sort] 
-        return xs_tensor, lengths_tensor, ts_result, ts_onehot_tensor, ts_onehot_LS_tensor
+            ts_lengths_new[i] = ts_lengths[i_sort]
+        return xs_tensor, lengths_tensor, torch.LongTensor(ts_result), ts_onehot_tensor, ts_onehot_LS_tensor, torch.LongTensor(ts_lengths_new)
     else:
         if hp.encoder_type == 'CNN':
             xs_tensor = torch.zeros((1, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
