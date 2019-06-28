@@ -4,10 +4,12 @@ import glob
 import itertools
 import numpy as np
 import os
+from scipy import fromstring, int16
 import sys
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import wave
 
 import hparams as hp
 from Models.AttModel import AttModel
@@ -51,10 +53,16 @@ def train_loop(model, optimizer, train_set, scheduler=None):
                 cpudat = cpudat[:, :hp.lmfb_dim]
             elif '.npy'in x_file:
                 cpudat = np.load(x_file)
+            elif '.wav' in x_file:
+                with wave.open(x_file) as wf:
+                    dat = wf.readframes(wf.getnframes())
+                    y = fromstring(dat, dtype=int16)[:, np.newaxis]
+                    y_float = y.astype(np.float32)
+                    cpudat = (y_float - np.mean(y_float)) / np.std(y_float)
 
             if hp.debug_mode == 'print':
                 print("{} {}".format(x_file, cpudat.shape[0]))
-            if hp.frame_stacking > 1:
+            if hp.frame_stacking > 1 and hp.encoder_type != 'Wave':
                 cpudat, newlen = frame_stacking(cpudat, hp.frame_stacking)
 
             newlen = cpudat.shape[0]
@@ -80,7 +88,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         loss = 0.0
         if hp.decoder_type == 'Attention':
             for k in range(hp.batch_size):
-                num_labels = ts[k].size(0)
+                num_labels = ts_lengths[k]
                 loss += label_smoothing_loss(youtput_in_Variable[k][:num_labels], ts_onehot_LS[k][:num_labels]) / num_labels
         elif hp.decoder_type == 'CTC':
             youtput_in_Variable = F.log_softmax(youtput_in_Variable, dim=2).transpose(0, 1)

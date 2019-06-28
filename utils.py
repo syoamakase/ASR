@@ -88,8 +88,11 @@ def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths
     arg_lengths = argsort(lengths)
     maxlen = max(lengths)
     
-    input_size = hp.lmfb_dim * hp.frame_stacking if frame_stacking else hp.lmfb_dim
- 
+    if hp.encoder_type != 'Wave':
+        input_size = hp.lmfb_dim * hp.frame_stacking if frame_stacking else hp.lmfb_dim
+    else:
+        input_size = 1
+        
     if (ts is not None) and (ts_lengths is not None) and (ts_onehot_LS is not None):
         if hp.encoder_type == 'CNN':
             xs_tensor = torch.zeros((hp.batch_size, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)

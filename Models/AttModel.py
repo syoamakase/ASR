@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 from Models.decoder import Decoder
-from Models.encoder import Encoder, CNN_Encoder
+from Models.encoder import Encoder, CNN_Encoder, WaveEncoder
 
 import hparams as hp
 
@@ -16,6 +16,8 @@ class AttModel(nn.Module):
         super(AttModel, self).__init__()
         if hp.encoder_type == 'CNN':
             self.encoder = CNN_Encoder()
+        elif hp.encoder_type == 'Wave':
+            self.encoder = WaveEncoder()
         else:
             self.encoder = Encoder()
         self.decoder = Decoder()
