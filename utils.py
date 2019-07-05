@@ -170,3 +170,8 @@ def init_weight(m):
         nn.init.kaiming_normal_(m.weight.data)
         if isinstance(m.bias, nn.parameter.Parameter):
             m.bias.data.fill_(0)
+
+def adjust_learning_rate(optimizer, epoch):
+    if step > 20:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] *= 0.8 

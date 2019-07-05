@@ -14,7 +14,7 @@ import wave
 import hparams as hp
 from Models.AttModel import AttModel
 from Models.CTCModel import CTCModel
-from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, init_weight
+from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, init_weight, adjust_learning_rate
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
 
@@ -34,7 +34,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         scheduler.step(epoch)
 
     for i in range(num_mb):
-        # input lmfb (B x T x 120)
+        # input lmfb (B x T x (F x frame_stacking))
         xs = []
         # target symbols
         ts = []
@@ -115,6 +115,7 @@ def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
         train_loop(model, optimizer, train_set, scheduler)
         torch.save(model.state_dict(), hp.save_dir+"/network.epoch{}".format(epoch+1))
         torch.save(optimizer.state_dict(), hp.save_dir+"/network.optimizer.epoch{}".format(epoch+1))
+        adjust_learning_rate(optimizer, epoch+1)
         print("EPOCH {} end".format(epoch+1))
 
 if __name__ == "__main__":
