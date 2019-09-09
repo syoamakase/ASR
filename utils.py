@@ -89,7 +89,7 @@ def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths
     maxlen = max(lengths)
     
     if hp.encoder_type != 'Wave':
-        input_size = hp.lmfb_dim * hp.frame_stacking if frame_stacking else hp.lmfb_dim
+        input_size = hp.lmfb_dim * hp.frame_stacking if hp.frame_stacking else hp.lmfb_dim
     else:
         input_size = 1
         
@@ -113,7 +113,9 @@ def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths
             ts_result.extend(list(ts[i_sort]))
             lengths_tensor.data[i] = lengths[i_sort] 
             ts_lengths_new[i] = ts_lengths[i_sort]
-        return xs_tensor, lengths_tensor, torch.LongTensor(ts_result), ts_onehot_tensor, ts_onehot_LS_tensor, torch.LongTensor(ts_lengths_new)
+
+        return xs_tensor, lengths_tensor, torch.LongTensor(ts_result).to(DEVICE), ts_onehot_tensor, ts_onehot_LS_tensor, torch.LongTensor(ts_lengths_new)
+
     else:
         if hp.encoder_type == 'CNN':
             xs_tensor = torch.zeros((1, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
@@ -126,6 +128,9 @@ def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths
         return  xs_tensor, lengths_tensor
 
 def load_model(model_file):
+    """
+    To load PyTorch models either of single-gpu and multi-gpu based model
+    """
     model_state = torch.load(model_file)
     is_multi_loading = True if torch.cuda.device_count() > 1 else False
     # This line may include bugs!!
@@ -172,6 +177,6 @@ def init_weight(m):
             m.bias.data.fill_(0)
 
 def adjust_learning_rate(optimizer, epoch):
-    if step > 20:
+    if epoch > 20:
         for param_group in optimizer.param_groups:
             param_group['lr'] *= 0.8 

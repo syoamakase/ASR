@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import scipy
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
 import hparams as hp
+
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Encoder(nn.Module):
     def __init__(self):
@@ -80,14 +83,14 @@ class WaveEncoder(nn.Module):
     def __init__(self):
         super(WaveEncoder, self).__init__()
         ## frond-end part
-        self.emp = 1e-8
+        self.epsilon = 1e-8
         # Like preemphasis filter
         self.preemp = nn.Conv1d(in_channels=1, out_channels=1, kernel_size=2, stride=1, padding=0, bias=False)
         # init
         tmp = torch.zeros((1,1,2)).to(DEVICE)
         tmp.data[:,:,0] = -0.97
         tmp.data[:,:,1] = 1
-        self.preemp.weight.data = K
+        self.preemp.weight.data = torch.tensor(tmp)
 
         # if 16kHz
         self.comp = nn.Conv1d(in_channels=1, out_channels=80, kernel_size=400, stride=1, padding=0, bias=False)
@@ -98,7 +101,7 @@ class WaveEncoder(nn.Module):
         tmp[:, :] = scipy.hanning(400 + 1)[:-1]
         tmp = tmp * tmp
 
-        K = torch.tensor(tmp, dtyoe=torch.float).to(DEIVCE)
+        K = torch.tensor(tmp, dtype=torch.float).to(DEVICE)
 
         self.lowpass_weight = K
 
@@ -114,16 +117,15 @@ class WaveEncoder(nn.Module):
                 batch_first=True, dropout=hp.encoder_dropout, bidirectional=True)
 
     def forward(self, x_waveform, lengths_waveform):
-        lengths_waveform = np.array(lengths_waveform)
 
         x_preemp = self.preemp(x_waveform.permute(0,2,1))
         x_comp = self.comp(x_preemp)
 
         x_even = x_comp[:, 0::2, :]
         x_odd = x_comp[:, 1::2, :]
-        x_abs = torch.sqrt(x_even * x_even + x_odd * x_odd + self.eps)
+        x_abs = torch.sqrt(x_even * x_even + x_odd * x_odd + self.epsilon)
 
-        x_lowpass = F.Conv1d(x_abs, self.lowpass_weight, stride=160, groups=40)
+        x_lowpass = F.conv1d(x_abs, self.lowpass_weight, stride=160, groups=40)
 
         x_log = torch.log(1.0 + torch.abs(x_lowpass))
 
@@ -134,4 +136,21 @@ class WaveEncoder(nn.Module):
         x_lengths = (x_lengths - (400 - 160)) // 160
 
         seqlen = x_norm.shape[1]
-         
+        
+        if hp.frame_stacking:
+            if seqlen % 3 == 0:
+               x_norm = torch.cat((x_norm[:, 0::3], x_norm[:, 1::3], x_norm[:, 2::3, :]), dim=2)
+            elif seqlen % 3 == 1:
+                x_norm = torch.cat((x_norm[:, 0:-1:3,:], x_norm[:, 1::3, :], x_norm[:, 2::3, :]), dim=2)
+            elif seqlen % 3 == 2:
+                x_norm = torch.cat((x_norm[:, 0:-2:3,:], x_norm[:, 1:-1:3, :], x_norm[:, 2::3, :]), dim=2)
+            
+            x_lengths /= 3
+        
+        x = nn.utils.rnn.pack_padded_sequence(x_norm, x_lengths.tolist(), batch_first=True)
+
+        h, (_, _) = self.bi_lstm(x)
+
+        hbatch, lengths = nn.utils.rnn.pad_packed_sequence(h, batch_first=True)
+
+        return hbatch
