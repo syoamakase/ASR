@@ -6,7 +6,6 @@ This script doesn't include preprocess (segment wave files, tanscriptions, and w
 - zoneout
 - shallow fusion
 - real-time version
-- CTC (?)
 
 ## Requirements
 

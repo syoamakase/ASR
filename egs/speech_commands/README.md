@@ -3,7 +3,7 @@
 This repository is data directory for Speech Command Data set.
 This data sets provided 2 versions (0.01 and 0.02).
 
-In this repository, we prepare acoustic features (log mel-scale filter bank feattures) for an end-to-end speech recongnition.
+In this repository, we prepare acoustic features (log mel-scale filter bank features) for an end-to-end speech recongnition.
 
 ## Preparation
 
@@ -23,7 +23,7 @@ In this repository, we prepare acoustic features (log mel-scale filter bank feat
 
 `./preprocess.sh`
 
-It takes about 20 minutes to finish preprocess.sh.
+It takes about 20 minutes to finish preprocess.sh.  
 After preprocessing, you can get word- and char-unit training scripts (`word/training_lmfb_list_word_id_random.txt` and `char/training_lmfb_list_char_id_random.txt`).
 
 (5. clean files)
@@ -32,7 +32,7 @@ If you want to delete all files which you downloaded and generated, do clean.sh.
 
 `./clean.sh`
 
-## training
+## Training
 
 Back to ASR/ and change `train_script` and `num_classes` in hparams.py
 You must change `num_classes` by the unit and version.
