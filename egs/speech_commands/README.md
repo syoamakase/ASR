@@ -15,18 +15,14 @@ In this repository, we prepare acoustic features (log mel-scale filter bank feat
 
 `cd 0.01 #or 0.02`
 
-3. execute path.sh
-
-`./path.sh`
-
-4. execute preprocess.sh
+3. execute preprocess.sh
 
 `./preprocess.sh`
 
 It takes about 20 minutes to finish preprocess.sh.  
 After preprocessing, you can get word- and char-unit training scripts (`word/training_lmfb_list_word_id_random.txt` and `char/training_lmfb_list_char_id_random.txt`).
 
-(5. clean files)
+(4. clean files)
 
 If you want to delete all files which you downloaded and generated, do clean.sh.
 
