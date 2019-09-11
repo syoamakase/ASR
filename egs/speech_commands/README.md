@@ -3,11 +3,13 @@
 This repository is data directory for Speech Command Data set.
 This data sets provided 2 versions (0.01 and 0.02).
 
-In this repository, we prepare acoustic features (log mel-scale filter bank features) for an end-to-end speech recongnition.
+In this repository, we prepare the acoustic features (log mel-scale filter bank features) for an end-to-end speech recongnition.
+
+As a results, you can get `word/training_lmfb_list_word.txt`, `char/training_lmfb_list_char_id_random.txt`, `word/training_wav_list_word.txt`, `char/training_wav_list_char_id_random.txt`.
 
 ## Preparation
 
-1. We need to install python package
+1. Install python package
 
 `pip install -r requirements.txt`
 
@@ -15,7 +17,7 @@ In this repository, we prepare acoustic features (log mel-scale filter bank feat
 
 `cd 0.01 #or 0.02`
 
-3. execute preprocess.sh
+3. Execute preprocess.sh
 
 `./preprocess.sh`
 
@@ -35,15 +37,25 @@ You must change `num_classes` by the unit and version.
 
 |   |#word|#char|
 |:--:|:--:|:--:|
-|0.01| 32 | 26 |
-|0.02| 27 | 25 |
-
+|0.01| 32 | 25 |
+|0.02| 37 | 26 |
 
 ```
-train_script = 'egs/speech_commands/word/training_lmfb_list_word_id_random.txt'
+train_script = 'egs/speech_commands/0.01/word/training_lmfb_list_word_id_random.txt'
 
 num_classes = 37 # or 32 or 26 or 25 
 ```
 
+## Evaluation
 
+You set `test_script=egs/speech_commands/0.01/word/validation_lmfb_list_word.txt` and do `test.py`.
 
+`python test.py --load_name checkpoint/network.epoch20 > e20.val.txt`
+
+testing or validation list like "egs/speech_commands/0.01/word/validation_lmfb_list_word.txt" includes the correct words.
+Don't worry!!  
+In test.py, we don't use the correct words.
+
+After finishing test.py, we calculate [word error rate](https://en.wikipedia.org/wiki/Word_error_rate).
+
+`python tools/calc_wer.py --ignore_sos_eos e20.val.txt egs/speech_commands/0.01/word/validation_lmfb_list_word.txt`
