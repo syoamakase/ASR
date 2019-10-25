@@ -111,7 +111,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         if hp.decoder_type == 'Attention':
             for k in range(hp.batch_size):
                 num_labels = ts_lengths[k]
-                loss += label_smoothing_loss(predict_ts[k, :num_labels], padded_sorted_ts[k, :num_labels])
+                loss += label_smoothing_loss(predict_ts[k, :num_labels], padded_sorted_ts[k, :num_labels]) / num_labels
         elif hp.decoder_type == 'CTC':
             predict_ts = F.log_softmax(predict_ts, dim=2).transpose(0, 1)
             loss = F.ctc_loss(predict_ts, padded_sorted_ts, sorted_xs_lengths, sorted_ts_lengths, blank=hp.num_classes)
