@@ -38,11 +38,10 @@ def load_dat(filename):
     fh.close()
     return dat
 
-def frame_stacking(cpudat, stack):
-    newlen = int(cpudat.shape[0] / stack)
-    cpudat = cpudat[:stack * newlen, :]
-    cpudat = np.reshape(cpudat, (newlen, stack, hp.lmfb_dim))
-    cpudat = np.reshape(cpudat, (newlen, stack * hp.lmfb_dim)).astype(np.float32)
+def frame_stacking(x, stack):
+    newlen = len(x) // stack
+    stacked_x = x[0:newlen * stack].reshape(newlen, hp.lmfb_dim * stack)
+    return stacked_x
     
     return cpudat, newlen
 
@@ -139,6 +138,7 @@ def load_model(model_file):
     if is_multi_loaded is is_multi_loading:
         return model_state
 
+    # the model to load is multi-gpu and the model to use is single-gpu
     elif is_multi_loaded is False and is_multi_loading is True:
         new_model_state = {}
         for key in model_state.keys():
@@ -180,3 +180,27 @@ def adjust_learning_rate(optimizer, epoch):
     if epoch > 20:
         for param_group in optimizer.param_groups:
             param_group['lr'] *= 0.8 
+
+#def overwritten_hparams():
+#    pass
+
+def spec_aug(x):
+    # x is B x T x F
+    aug_F = 15
+    aug_T = 100
+    #aug_mT = 2
+    x_frames = x.shape[1]
+
+    aug_f = np.random.randint(0, aug_F)
+    aug_f0 = np.random.randint(0, 40 - aug_f)
+
+    if x_frames > aug_T:
+        duration = np.random.randint(0, aug_T)
+    else:
+        duration = np.random.randint(0, x_frames-1)
+    start_t = np.random.randint(0, x.shape[1] - duration)
+
+    x[start_t:start_t+duration, :] = 0.0
+    x[:, aug_f:aug_f+aug_f0] = 0.0
+
+    return x

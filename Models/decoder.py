@@ -47,7 +47,7 @@ class Decoder(nn.Module):
             # generate
             y = self.L_yy(torch.tanh(self.L_gy(g) + self.L_sy(s)))
             # recurrency calcuate
-            rec_input = self.L_ys(targets[:,step,:]) + self.L_ss(s) + self.L_gs(g)
+            rec_input = self.L_ys(self._one_hot(hp.num_classes, targets[:,step])) + self.L_ss(s) + self.L_gs(g)
             s, c = self._func_lstm(rec_input, c)
 
             youtput[:,step] = y
@@ -107,6 +107,60 @@ class Decoder(nn.Module):
                 break
         return results
     
+    def analyze(self, hbatch, lengths):
+        batch_size = hbatch.size(0)
+        num_frames = hbatch.size(1)
+        e_mask = torch.ones((batch_size, num_frames, 1), device=DEVICE, requires_grad=False)
+
+        token_beam_sel = [([], 0.0, (torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
+                        torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
+                        torch.zeros((batch_size, 1, num_frames), device=DEVICE, requires_grad=False)))]
+
+        for i, tmp in enumerate(lengths):
+            if tmp < num_frames:
+                e_mask[i, tmp:] = 0.0
+
+        for _ in range(hp.max_decoder_seq_len):
+            token_beam_all = []
+
+            for current_token in token_beam_sel:
+                cand_seq, cand_seq_score, (c, s, alpha) = current_token
+
+                g, alpha = self.att(s, hbatch, alpha, e_mask)
+                
+                # generate
+                y = self.L_yy(torch.tanh(self.L_gy(g) + self.L_sy(s)))
+
+                if hp.score_func == 'log_softmax':
+                    y = F.log_softmax(y, dim=1)
+                elif hp.score_func == 'softmax':
+                    y = F.softmax(y, dim=1)
+                
+                tmpy = y.clone()
+                for _ in range(hp.beam_width):
+                    bestidx = tmpy.data.argmax(1).item()
+
+                    tmpseq = cand_seq.copy()
+                    tmpseq.append(bestidx)
+
+                    tmpscore = cand_seq_score + tmpy.data[0][bestidx]
+                    tmpy.data[0][bestidx] = -10000000000.0
+                    target_for_t_estimated = torch.zeros((1, hp.num_classes), device=DEVICE, requires_grad=False)
+
+                    target_for_t_estimated.data[0][bestidx] = 1.0
+                    rec_input = self.L_ys(target_for_t_estimated) + self.L_ss(s) + self.L_gs(g)
+                    tmps, tmpc = self._func_lstm(rec_input, c)
+
+                    token_beam_all.append((tmpseq, tmpscore, (tmpc, tmps, alpha)))
+            sorted_token_beam_all = sorted(token_beam_all, key=itemgetter(1), reverse=True)
+            token_beam_sel = sorted_token_beam_all[:hp.beam_width]
+            results = []
+            if token_beam_sel[0][0][-1] == hp.eos_id:
+                for character in token_beam_sel[0][0]:
+                    results.append(character)
+                break
+        return results 
+
     @staticmethod
     def _func_lstm(x, c):
         ingate, forgetgate, cellgate, outgate = x.chunk(4, 1)
@@ -118,3 +172,6 @@ class Decoder(nn.Module):
         c_next = (forgetgate * c) + (ingate * cellgate)
         h = outgate * torch.tanh(c_next)
         return h, c_next
+
+    def _one_hot(self, num_classes, label):
+        return torch.eye(num_classes)[label].to(DEVICE)

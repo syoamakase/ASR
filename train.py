@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import copy
 import glob
 import itertools
@@ -14,9 +15,11 @@ import wave
 import hparams as hp
 from Models.AttModel import AttModel
 from Models.CTCModel import CTCModel
-from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, init_weight, adjust_learning_rate
+from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, init_weight, adjust_learning_rate, spec_aug
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
+
+import utils_specaug
 
 try:
     from visdom import Visdom
@@ -60,10 +63,17 @@ def train_loop(model, optimizer, train_set, scheduler=None):
                     y_float = y.astype(np.float32)
                     cpudat = (y_float - np.mean(y_float)) / np.std(y_float)
 
+            #cpudat = spec_aug(cpudat)
+            cpudat = torch.from_numpy(cpudat)
+            # T = min(cpudat.shape[1] // 2 - 1, 40)
+            #x_norm[i] = utils.time_mask(utils.freq_mask(utils.time_warp(x_norm[i].clone().unsqueeze(0).transpose(1, 2)), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0)
+            #cpudat = utils_specaug.time_mask(utils_specaug.freq_mask(cpudat.clone().unsqueeze(0).transpose(1, 2), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0).numpy()
+
             if hp.debug_mode == 'print':
                 print("{} {}".format(x_file, cpudat.shape[0]))
+
             if hp.frame_stacking > 1 and hp.encoder_type != 'Wave':
-                cpudat, newlen = frame_stacking(cpudat, hp.frame_stacking)
+                cpudat = frame_stacking(cpudat, hp.frame_stacking)
 
             newlen = cpudat.shape[0]
             if hp.encoder_type == 'CNN':
@@ -71,28 +81,40 @@ def train_loop(model, optimizer, train_set, scheduler=None):
                 cpudat = np.hstack((cpudat_split[0].reshape(newlen, 1, 80),
                             cpudat_split[1].reshape(newlen, 1, 80), cpudat_split[2].reshape(newlen, 1, 80)))
             newlen = cpudat.shape[0]
-            lengths.append(newlen)
-            xs.append(cpudat)
             cpulab = np.array([int(i) for i in laborg.split(' ')], dtype=np.int32)
+            xs.append(torch.tensor(cpudat, device=DEVICE).float())
+            ts.append(torch.tensor(cpulab, device=DEVICE).long())
 
-            cpulab_onehot = onehot(cpulab, hp.num_classes)
-            ts.append(cpulab)
-            ts_lengths.append(len(cpulab))
-            ts_onehot.append(cpulab_onehot)
-            ts_onehot_LS.append(0.9 * cpulab_onehot + 0.1 * 1.0 / hp.num_classes)
+            #cpulab_onehot = onehot(cpulab, hp.num_classes)
+            #ts.append(cpulab)
+            #ts_onehot.append(cpulab_onehot)
+            #ts_lengths.append(len(cpulab))
+            #ts_onehot_LS.append(0.9 * cpulab_onehot + 0.1 * 1.0 / hp.num_classes)
 
-        xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths = sort_pad(xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths)
-        
-        youtput_in_Variable = model(xs, lengths, ts_onehot)
+        # to make function
+        xs_lengths = torch.tensor(np.array([len(x) for x in xs], dtype=np.int32), device = DEVICE)
+        ts_lengths = torch.tensor(np.array([len(t) for t in ts], dtype=np.int32), device = DEVICE)
+
+        padded_xs = nn.utils.rnn.pad_sequence(xs, batch_first = True) 
+        padded_ts = nn.utils.rnn.pad_sequence(ts, batch_first = True)
+
+        sorted_xs_lengths, perm_index = xs_lengths.sort(0, descending = True)
+        sorted_ts_lengths = ts_lengths[perm_index]
+        padded_sorted_xs = padded_xs[perm_index] 
+        padded_sorted_ts = padded_ts[perm_index]
+
+        #xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths = sort_pad(xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths)
+
+        predict_ts = model(padded_sorted_xs, sorted_xs_lengths, padded_sorted_ts)
 
         loss = 0.0
         if hp.decoder_type == 'Attention':
             for k in range(hp.batch_size):
                 num_labels = ts_lengths[k]
-                loss += label_smoothing_loss(youtput_in_Variable[k][:num_labels], ts_onehot_LS[k][:num_labels]) / num_labels
+                loss += label_smoothing_loss(predict_ts[k, :num_labels], padded_sorted_ts[k, :num_labels])
         elif hp.decoder_type == 'CTC':
-            youtput_in_Variable = F.log_softmax(youtput_in_Variable, dim=2).transpose(0, 1)
-            loss = F.ctc_loss(youtput_in_Variable, ts, lengths, ts_lengths, blank=hp.num_classes)
+            predict_ts = F.log_softmax(predict_ts, dim=2).transpose(0, 1)
+            loss = F.ctc_loss(predict_ts, padded_sorted_ts, sorted_xs_lengths, sorted_ts_lengths, blank=hp.num_classes)
 
         if hp.debug_mode == 'visdom':
             viz.line(X=np.array([i]), Y=np.array([loss.item()]), win='loss', name='train_loss', update='append')
@@ -103,7 +125,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         optimizer.zero_grad()
         # backward
         loss.backward()
-        clip = 5.0
+        clip = 2.0
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
         # optimizer update
         optimizer.step()
@@ -111,7 +133,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         torch.cuda.empty_cache()
 
 def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
-    for epoch in range(start_epoch, hp.max_epoch+1):
+    for epoch in range(start_epoch, hp.max_epoch):
         train_loop(model, optimizer, train_set, scheduler)
         torch.save(model.state_dict(), hp.save_dir+"/network.epoch{}".format(epoch+1))
         torch.save(optimizer.state_dict(), hp.save_dir+"/network.optimizer.epoch{}".format(epoch+1))
@@ -119,6 +141,9 @@ def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
         print("EPOCH {} end".format(epoch+1))
 
 if __name__ == "__main__":
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument('--hparams', type=str, default=None)
+
     log_config()
     if hp.legacy:
         model = Model()

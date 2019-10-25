@@ -41,3 +41,16 @@ class CTCModel(nn.Module):
                 prev_id = int(x)
 
         return results
+
+    def analyze(self, x, lengths):
+        with torch.no_grad():
+            hbatch = self.encoder(x, lengths)
+            decoder_output = self.decoder(hbatch)
+
+            results = []
+            prev_id = hp.num_classes + 1
+            for x in decoder_output[0].argmax(dim=1):
+                results.append(int(x))
+
+        return results
+            
