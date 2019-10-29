@@ -47,7 +47,7 @@ class Decoder(nn.Module):
             # generate
             y = self.L_yy(torch.tanh(self.L_gy(g) + self.L_sy(s)))
             # recurrency calcuate
-            rec_input = self.L_ys(self._one_hot(hp.num_classes, targets[:,step])) + self.L_ss(s) + self.L_gs(g)
+            rec_input = self.L_ys(targets[:, step, :]) + self.L_ss(s) + self.L_gs(g)
             s, c = self._func_lstm(rec_input, c)
 
             youtput[:,step] = y

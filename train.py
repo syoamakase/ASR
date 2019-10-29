@@ -65,9 +65,9 @@ def train_loop(model, optimizer, train_set, scheduler=None):
 
             #cpudat = spec_aug(cpudat)
             cpudat = torch.from_numpy(cpudat)
-            # T = min(cpudat.shape[1] // 2 - 1, 40)
+            T = min(cpudat.shape[1] // 2 - 1, 40)
             #x_norm[i] = utils.time_mask(utils.freq_mask(utils.time_warp(x_norm[i].clone().unsqueeze(0).transpose(1, 2)), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0)
-            #cpudat = utils_specaug.time_mask(utils_specaug.freq_mask(cpudat.clone().unsqueeze(0).transpose(1, 2), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0).numpy()
+            cpudat = utils_specaug.time_mask(utils_specaug.freq_mask(cpudat.clone().unsqueeze(0).transpose(1, 2), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0).numpy()
 
             if hp.debug_mode == 'print':
                 print("{} {}".format(x_file, cpudat.shape[0]))
@@ -81,15 +81,15 @@ def train_loop(model, optimizer, train_set, scheduler=None):
                 cpudat = np.hstack((cpudat_split[0].reshape(newlen, 1, 80),
                             cpudat_split[1].reshape(newlen, 1, 80), cpudat_split[2].reshape(newlen, 1, 80)))
             newlen = cpudat.shape[0]
-            cpulab = np.array([int(i) for i in laborg.split(' ')], dtype=np.int32)
+            #cpulab = np.array([int(i) for i in laborg.split(' ')], dtype=np.int32)
+            lab_seq = torch.tensor([int(i) for i in laborg.split(' ')], device=DEVICE).long()
             xs.append(torch.tensor(cpudat, device=DEVICE).float())
-            ts.append(torch.tensor(cpulab, device=DEVICE).long())
+            ts.append(lab_seq)
 
-            #cpulab_onehot = onehot(cpulab, hp.num_classes)
-            #ts.append(cpulab)
-            #ts_onehot.append(cpulab_onehot)
-            #ts_lengths.append(len(cpulab))
-            #ts_onehot_LS.append(0.9 * cpulab_onehot + 0.1 * 1.0 / hp.num_classes)
+            lab_seq_onehot = F.one_hot(lab_seq, hp.num_classes).float()
+            ts_onehot.append(lab_seq_onehot)
+            ts_lengths.append(len(lab_seq))
+            ts_onehot_LS.append(0.9 * lab_seq_onehot + 0.1 * 1.0 / hp.num_classes)
 
         # to make function
         xs_lengths = torch.tensor(np.array([len(x) for x in xs], dtype=np.int32), device = DEVICE)
@@ -97,21 +97,25 @@ def train_loop(model, optimizer, train_set, scheduler=None):
 
         padded_xs = nn.utils.rnn.pad_sequence(xs, batch_first = True) 
         padded_ts = nn.utils.rnn.pad_sequence(ts, batch_first = True)
+        padded_ts_onehot = nn.utils.rnn.pad_sequence(ts_onehot, batch_first = True)
+        padded_ts_onehot_LS = nn.utils.rnn.pad_sequence(ts_onehot_LS, batch_first = True)
 
         sorted_xs_lengths, perm_index = xs_lengths.sort(0, descending = True)
         sorted_ts_lengths = ts_lengths[perm_index]
         padded_sorted_xs = padded_xs[perm_index] 
         padded_sorted_ts = padded_ts[perm_index]
+        padded_sorted_ts_onehot = padded_ts_onehot[perm_index] 
+        padded_sorted_ts_onehot_LS = padded_ts_onehot_LS[perm_index]
 
         #xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths = sort_pad(xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths)
 
-        predict_ts = model(padded_sorted_xs, sorted_xs_lengths, padded_sorted_ts)
+        predict_ts = model(padded_sorted_xs, sorted_xs_lengths, padded_sorted_ts_onehot)
 
         loss = 0.0
         if hp.decoder_type == 'Attention':
             for k in range(hp.batch_size):
                 num_labels = ts_lengths[k]
-                loss += label_smoothing_loss(predict_ts[k, :num_labels], padded_sorted_ts[k, :num_labels]) / num_labels
+                loss += label_smoothing_loss(predict_ts[k, :num_labels], padded_sorted_ts_onehot_LS[k, :num_labels]) / num_labels
         elif hp.decoder_type == 'CTC':
             predict_ts = F.log_softmax(predict_ts, dim=2).transpose(0, 1)
             loss = F.ctc_loss(predict_ts, padded_sorted_ts, sorted_xs_lengths, sorted_ts_lengths, blank=hp.num_classes)

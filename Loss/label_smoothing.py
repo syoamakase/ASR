@@ -13,8 +13,6 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #     def __init__(self):
 #         super(LabelSmoothingLoss, self).__init__()
 
-def label_smoothing_loss(predict_ts, ts):
-    onehot_target = torch.eye(hp.num_classes)[ts].to(DEVICE)
-    ls_target = 0.9 * onehot_target + ((1.0 - 0.9) / (hp.num_classes - 1)) * (1.0 - onehot_target)
+def label_smoothing_loss(predict_ts, ls_target):
     loss = -(F.log_softmax(predict_ts, dim=1) * ls_target).sum()
     return loss
