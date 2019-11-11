@@ -45,9 +45,6 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         ts_onehot = []
         # vector of target symbols for label smoothing (B x L x NUM_CLASSES)
         ts_onehot_LS = []
-        # input lengths
-        lengths = []
-        ts_lengths = []
         for j in range(hp.batch_size):
             s = train_set[i*hp.batch_size+j].strip()
             x_file, laborg = s.split(' ', 1)
@@ -65,9 +62,10 @@ def train_loop(model, optimizer, train_set, scheduler=None):
 
             #cpudat = spec_aug(cpudat)
             cpudat = torch.from_numpy(cpudat)
-            T = min(cpudat.shape[1] // 2 - 1, 40)
-            #x_norm[i] = utils.time_mask(utils.freq_mask(utils.time_warp(x_norm[i].clone().unsqueeze(0).transpose(1, 2)), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0)
-            cpudat = utils_specaug.time_mask(utils_specaug.freq_mask(cpudat.clone().unsqueeze(0).transpose(1, 2), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0).numpy()
+            if hp.use_spec_aug:
+                T = min(cpudat.shape[1] // 2 - 1, 40)
+                #x_norm[i] = utils.time_mask(utils.freq_mask(utils.time_warp(x_norm[i].clone().unsqueeze(0).transpose(1, 2)), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0)
+                cpudat = utils_specaug.time_mask(utils_specaug.freq_mask(cpudat.clone().unsqueeze(0).transpose(1, 2), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0).numpy()
 
             if hp.debug_mode == 'print':
                 print("{} {}".format(x_file, cpudat.shape[0]))
@@ -80,6 +78,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
                 cpudat_split = np.split(cpudat, 3, axis = 1)
                 cpudat = np.hstack((cpudat_split[0].reshape(newlen, 1, 80),
                             cpudat_split[1].reshape(newlen, 1, 80), cpudat_split[2].reshape(newlen, 1, 80)))
+
             newlen = cpudat.shape[0]
             #cpulab = np.array([int(i) for i in laborg.split(' ')], dtype=np.int32)
             lab_seq = torch.tensor([int(i) for i in laborg.split(' ')], device=DEVICE).long()
@@ -88,12 +87,11 @@ def train_loop(model, optimizer, train_set, scheduler=None):
 
             lab_seq_onehot = F.one_hot(lab_seq, hp.num_classes).float()
             ts_onehot.append(lab_seq_onehot)
-            ts_lengths.append(len(lab_seq))
             ts_onehot_LS.append(0.9 * lab_seq_onehot + 0.1 * 1.0 / hp.num_classes)
 
         # to make function
         xs_lengths = torch.tensor(np.array([len(x) for x in xs], dtype=np.int32), device = DEVICE)
-        ts_lengths = torch.tensor(np.array([len(t) for t in ts], dtype=np.int32), device = DEVICE)
+        ts_lengths = torch.tensor(np.array([len(t) for t in ts], dtype=np.int32), dtype=torch.float, device = DEVICE)
 
         padded_xs = nn.utils.rnn.pad_sequence(xs, batch_first = True) 
         padded_ts = nn.utils.rnn.pad_sequence(ts, batch_first = True)
@@ -109,12 +107,15 @@ def train_loop(model, optimizer, train_set, scheduler=None):
 
         #xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths = sort_pad(xs, lengths, ts, ts_onehot, ts_onehot_LS, ts_lengths)
 
-        predict_ts = model(padded_sorted_xs, sorted_xs_lengths, padded_sorted_ts_onehot)
-
+        if hp.output_mode == 'onehot':
+            predict_ts = model(padded_sorted_xs, sorted_xs_lengths, padded_sorted_ts_onehot)
+        else:
+            predict_ts = model(padded_sorted_xs, sorted_xs_lengths, padded_sorted_ts)
+            
         loss = 0.0
         if hp.decoder_type == 'Attention':
             for k in range(hp.batch_size):
-                num_labels = ts_lengths[k]
+                num_labels = int(sorted_ts_lengths[k].item())
                 loss += label_smoothing_loss(predict_ts[k, :num_labels], padded_sorted_ts_onehot_LS[k, :num_labels]) / num_labels
         elif hp.decoder_type == 'CTC':
             predict_ts = F.log_softmax(predict_ts, dim=2).transpose(0, 1)
@@ -145,8 +146,11 @@ def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
         print("EPOCH {} end".format(epoch+1))
 
 if __name__ == "__main__":
-    #parser = argparse.ArgumentParser()
-    #parser.add_argument('--hparams', type=str, default=None)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--hparams', type=str, default=None)
+    args = parser.parse_args()
+    
+    overwrite_hparams(args)
 
     log_config()
     if hp.legacy:

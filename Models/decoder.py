@@ -22,7 +22,10 @@ class Decoder(nn.Module):
         self.L_gy = nn.Linear(self.num_decoder_hidden_nodes * 2, self.num_decoder_hidden_nodes)
         self.L_yy = nn.Linear(self.num_decoder_hidden_nodes, self.num_classes)
 
-        self.L_ys = nn.Linear(self.num_classes, self.num_decoder_hidden_nodes * 4 , bias=False)
+        if hp.output_mode == 'onehot':
+            self.L_ys = nn.Linear(self.num_classes, self.num_decoder_hidden_nodes * 4 , bias=False)
+        else:
+            self.L_ys = nn.Embedding(self.num_classes, self.num_decoder_hidden_nodes * 4)
         self.L_ss = nn.Linear(self.num_decoder_hidden_nodes, self.num_decoder_hidden_nodes * 4, bias=False)
         self.L_gs = nn.Linear(self.num_decoder_hidden_nodes * 2, self.num_decoder_hidden_nodes * 4)
 
@@ -47,7 +50,10 @@ class Decoder(nn.Module):
             # generate
             y = self.L_yy(torch.tanh(self.L_gy(g) + self.L_sy(s)))
             # recurrency calcuate
-            rec_input = self.L_ys(targets[:, step, :]) + self.L_ss(s) + self.L_gs(g)
+            if hp.output_mode == 'onehot':
+                rec_input = self.L_ys(targets[:, step, :]) + self.L_ss(s) + self.L_gs(g)
+            else:
+                rec_input = self.L_ys(targets[:, step]) + self.L_ss(s) + self.L_gs(g)
             s, c = self._func_lstm(rec_input, c)
 
             youtput[:,step] = y
@@ -84,17 +90,20 @@ class Decoder(nn.Module):
                 
                 tmpy = y.clone()
                 for _ in range(hp.beam_width):
-                    bestidx = tmpy.data.argmax(1).item()
+                    bestidx = tmpy.data.argmax(1)
 
                     tmpseq = cand_seq.copy()
-                    tmpseq.append(bestidx)
+                    tmpseq.append(bestidx.item())
 
                     tmpscore = cand_seq_score + tmpy.data[0][bestidx]
                     tmpy.data[0][bestidx] = -10000000000.0
-                    target_for_t_estimated = torch.zeros((1, hp.num_classes), device=DEVICE, requires_grad=False)
 
-                    target_for_t_estimated.data[0][bestidx] = 1.0
-                    rec_input = self.L_ys(target_for_t_estimated) + self.L_ss(s) + self.L_gs(g)
+                    if hp.output_mode == 'onehot':
+                        target_for_t_estimated = torch.zeros((1, hp.num_classes), device=DEVICE, requires_grad=False)
+                        target_for_t_estimated.data[0][bestidx] = 1.0
+                        rec_input = self.L_ys(target_for_t_estimated) + self.L_ss(s) + self.L_gs(g)
+                    else:
+                        rec_input = self.L_ys(bestidx) + self.L_ss(s) + self.L_gs(g)
                     tmps, tmpc = self._func_lstm(rec_input, c)
 
                     token_beam_all.append((tmpseq, tmpscore, (tmpc, tmps, alpha)))

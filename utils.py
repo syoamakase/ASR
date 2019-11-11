@@ -2,6 +2,7 @@
 import copy
 import numpy as np
 from struct import unpack, pack
+import os
 import sys
 import torch
 import torch.nn as nn
@@ -11,6 +12,8 @@ import hparams as hp
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def log_config():
+    print('PID = {}'.format(os.getpid()))
+    print('cuda device = {}'.format(os.environ['CUDA_VISIBLE_DEVICES']))
     for key in hp.__dict__.keys():
         if not '__' in key:
             print('{} = {}'.format(key, eval('hp.'+key)))
@@ -204,3 +207,12 @@ def spec_aug(x):
     x[:, aug_f:aug_f+aug_f0] = 0.0
 
     return x
+
+def overwrite_hparams(args):
+    # if args.hparams:
+    #     import args.hparams as hparams_overwrite
+    #     hp = hparams_overwrite
+    # else:
+    for key, value in args._get_kwargs():
+        if value is not None and value != 'load_name':
+            setattr(hp, key, value)

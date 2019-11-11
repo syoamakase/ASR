@@ -1,13 +1,16 @@
 ## CONFIG
 
-train_script = '/n/work1/ueno/data/librispeech/texts/script.word.sort_xlen'
-save_dir = 'checkpoints.word.libri960'
+#train_script = '/n/work1/ueno/data/librispeech/texts/script.word.sort_xlen'
+train_script = '/n/work1/ueno/data/librispeech/texts/bpe/script.bpe5000.sort_xlen'
+#train_script = '/n/rd32/mimura/e2e/data/original/script/aps_sps/bpe/script.bpe.sort_xlen'
+save_dir = 'checkpoints.libri.bpe5000.emb'
 load_checkpoints = False # you must use only train.py if you want to load the saved model
 load_checkpoints_path = None # or path
 load_checkpoints_epoch = None #None
 
 #test_script = 'egs/speech_commands/0.01/word/validation_lmfb_list_word.txt'
-test_script = '/n/rd32/mimura/e2e/data/original/feature/eval/script.eval1'
+#test_script = '/n/rd32/mimura/e2e/data/original/feature/eval/script.eval3'
+test_script = '/n/work1/ueno/data/librispeech/eval/lmfblist.test_other'
 #test_script = '/n/sd3/feng/data/swb/swb/inputs_test.txt'
 #test_script = '/n/rd28/mimura/speech_commands/feature/script.e2e.word.testing'
 
@@ -15,8 +18,16 @@ test_script = '/n/rd32/mimura/e2e/data/original/feature/eval/script.eval1'
 lmfb_dim = 40
 #num_classes = 19146
 #num_classes = 10459
-num_classes = 47465
-eos_id = 1
+# libri word 
+#num_classes = 47465
+#eos_id = 1
+# libri bpe #5000
+num_classes = 5048
+eos_id = 8
+# libri bpe 10000
+#num_classes = 10025
+#eos_id = 10
+
 
 # network config
 frame_stacking = 3 # or False
@@ -27,8 +38,9 @@ encoder_type = None # 'CNN', 'Wave'
 decoder_type = 'Attention' #'CTC' #or 'Attention' 
 
 # training setting
-batch_size = 40
+batch_size = 30
 max_epoch = 40
+use_spec_aug = True
 
 # inference config (attention)
 max_decoder_seq_len = 200
@@ -46,3 +58,4 @@ legacy = False
 # others
 debug_mode = 'print' # or visdom
 nan_analyze_type = 'ignore' # 'stop'
+output_mode = 'other'
