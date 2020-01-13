@@ -6,7 +6,8 @@ import torch.nn.functional as F
 import torch.nn as nn
 from torch.autograd import Variable
 
-import hparams as hp
+#import hparams as hp
+from utils import hparams as hp
 
 class Attention(nn.Module):
     """

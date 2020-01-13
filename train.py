@@ -12,21 +12,16 @@ import torch.nn.functional as F
 import torch.nn as nn
 import wave
 
-import hparams as hp
+#import hparams as hp
+from utils import hparams as hp
 from Models.AttModel import AttModel
 from Models.CTCModel import CTCModel
-from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, init_weight, adjust_learning_rate, spec_aug
+from utils.utils import frame_stacking, onehot, load_dat, log_config, load_model, init_weight, adjust_learning_rate, spec_aug
 from Loss.label_smoothing import label_smoothing_loss
 from legacy.model import Model
 
 import utils_specaug
 
-try:
-    from visdom import Visdom
-    viz = Visdom()
-except:
-    if hp.debug_mode == 'visdom':
-        raise ModuleNotFoundError
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -112,7 +107,7 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         else:
             predict_ts = model(padded_sorted_xs, sorted_xs_lengths, padded_sorted_ts)
             
-        loss = 0.0
+        loss = -1.0
         if hp.decoder_type == 'Attention':
             for k in range(hp.batch_size):
                 num_labels = int(sorted_ts_lengths[k].item())
@@ -147,10 +142,18 @@ def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hparams', type=str, default=None)
+    parser.add_argument('--hp_file', metavar='FILE', default='hparams.py')
     args = parser.parse_args()
     
-    overwrite_hparams(args)
+    #overwrite_hparams(args)
+    hp.configure(args.hp_file)
+
+    try:
+        from visdom import Visdom
+        viz = Visdom()
+    except:
+        if hp.debug_mode == 'visdom':
+            raise ModuleNotFoundError
 
     log_config()
     if hp.legacy:

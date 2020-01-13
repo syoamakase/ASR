@@ -9,10 +9,11 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-import hparams as hp
+#import hparams as hp
+from utils import hparams as hp
 from Models.AttModel import AttModel
 from Models.CTCModel import CTCModel
-from utils import frame_stacking, onehot, load_dat, log_config, sort_pad, load_model, overwrite_hparams
+from utils.utils import frame_stacking, onehot, load_dat, log_config, load_model, overwrite_hparams
 from legacy.model import Model
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -63,11 +64,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #parser.add_argument('--load_model', default=hp.load_checkpoints_path+'/network.epoch{}'.format(hp.load_checkpoints_epoch))
     parser.add_argument('--load_name')
-    parser.add_argument('--hparams', default=None)
+    parser.add_argument('--hp_file', metavar='FILE', default='hparams.py')
     parser.add_argument('--test_script', type=str, default=None)
+    parser.add_argument('--num_classes', type=int, default=None)
+    parser.add_argument('--eos_id', type=int, default=None)
+    parser.add_argument('--output_mode', type=str, default=None)
     
     args = parser.parse_args()
     load_name = args.load_name
+
+    hp.configure(args.hp_file)
     overwrite_hparams(args)
 
     if hp.legacy:

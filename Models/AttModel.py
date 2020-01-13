@@ -6,10 +6,10 @@ import torch.nn.functional as F
 import torch.nn as nn
 from torch.autograd import Variable
 
+from utils import hparams as hp
+
 from Models.decoder import Decoder
 from Models.encoder import Encoder, CNN_Encoder, WaveEncoder
-
-import hparams as hp
 
 class AttModel(nn.Module):
     def __init__(self):

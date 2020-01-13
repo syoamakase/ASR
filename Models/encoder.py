@@ -6,7 +6,8 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-import hparams as hp
+#import hparams as hp
+from utils import hparams as hp
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -80,7 +81,7 @@ class CNN_Encoder(nn.Module):
         return hbatch
 
 class WaveEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, hp):
         super(WaveEncoder, self).__init__()
         ## frond-end part
         self.epsilon = 1e-8

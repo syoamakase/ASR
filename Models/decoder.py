@@ -7,7 +7,8 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 from Models.attention import Attention
-import hparams as hp
+#import hparams as hp
+from utils import hparams as hp
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -16,7 +17,7 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.num_decoder_hidden_nodes = hp.num_hidden_nodes
         self.num_classes = hp.num_classes
-        self.att = Attention()
+        self.att = Attention(hp)
         # decoder
         self.L_sy = nn.Linear(self.num_decoder_hidden_nodes, self.num_decoder_hidden_nodes, bias=False)
         self.L_gy = nn.Linear(self.num_decoder_hidden_nodes * 2, self.num_decoder_hidden_nodes)

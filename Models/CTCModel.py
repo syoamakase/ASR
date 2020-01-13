@@ -8,14 +8,15 @@ from torch.autograd import Variable
 
 from Models.encoder import Encoder, CNN_Encoder, WaveEncoder
 
-import hparams as hp
+#import hparams as hp
+from utils import hparams as hp
 
 class CTCModel(nn.Module):
     def __init__(self):
         super(CTCModel, self).__init__()
-        if hp.encoder_type == 'CNN':
+        if self.hp.encoder_type == 'CNN':
             self.encoder = CNN_Encoder()
-        elif hp.encoder_type == 'Wave':
+        elif self.hp.encoder_type == 'Wave':
             self.encoder = WaveEncoder()
         else:
             self.encoder = Encoder()

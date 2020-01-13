@@ -7,7 +7,8 @@ import sys
 import torch
 import torch.nn as nn
 
-import hparams as hp
+#import hparams as hp
+from utils import hparams as hp
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -43,7 +44,7 @@ def load_dat(filename):
 
 def frame_stacking(x, stack):
     newlen = len(x) // stack
-    stacked_x = x[0:newlen * stack].reshape(newlen, hp.lmfb_dim * stack)
+    stacked_x = x[0:newlen*stack].reshape(newlen, hp.lmfb_dim * stack)
     return stacked_x
     
     return cpudat, newlen
@@ -66,68 +67,68 @@ def onehot(labels, num_output):
     return utt_label
 
 # sorting lengths order
-def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths=None):
-    """
-    To sort "lengths" order.
-    This funtion is needed for "torch.nn.utils.rnn.pack_padded_sequence()"
-
-    Args:
-        xs : input feature. (BATCH SIZE, time frames, log mel-scale filter bank)
-        ts : grand truth data (BATCH SIZE, label lengths)
-        ts_onehot : grand truth data which is an onehot vector (BATCH SIZE, label lengths, #labels)
-        ts_onehot_LS : grand truth data which is a vector for label smoothing (BATCH SIZE, label lengths, #labels)
-        lengths : the lengths of the input feature (BATCH SIZE)
-        ts_lengths : the lengths of grand truth data (BATCH SIZE)
-
-    Returns:
-        xs_tensor : "torch FloatTensor" of sorted xs
-        ts_results : list of sorted ts
-        ts_onehot_tensor : "torch FloatTensor" of sorted ts_onehot
-        lengths : sorted lenghts
-    """
-    def argsort(seq):
-        return np.argsort(np.array(seq))[::-1].tolist()
-    arg_lengths = argsort(lengths)
-    maxlen = max(lengths)
-    
-    if hp.encoder_type != 'Wave':
-        input_size = hp.lmfb_dim * hp.frame_stacking if hp.frame_stacking else hp.lmfb_dim
-    else:
-        input_size = 1
-        
-    if (ts is not None) and (ts_lengths is not None) and (ts_onehot_LS is not None):
-        if hp.encoder_type == 'CNN':
-            xs_tensor = torch.zeros((hp.batch_size, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
-        else:
-            xs_tensor = torch.zeros((hp.batch_size, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
-        ts_maxlen = max(ts_lengths)
-        ts_onehot_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32,
-                                device=DEVICE, requires_grad=True)
-        ts_onehot_LS_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32,
-                                device=DEVICE, requires_grad=True)
-        lengths_tensor = torch.zeros((hp.batch_size), dtype=torch.int64, device=DEVICE)
-        ts_lengths_new = copy.deepcopy(ts_lengths)
-        ts_result = []
-        for i, i_sort in enumerate(arg_lengths):
-            xs_tensor.data[i, 0:lengths[i_sort]] = torch.from_numpy(xs[i_sort])
-            ts_onehot_tensor.data[i, 0:ts_lengths[i_sort]] = torch.from_numpy(ts_onehot[i_sort])
-            ts_onehot_LS_tensor.data[i, 0:ts_lengths[i_sort]] = torch.from_numpy(ts_onehot_LS[i_sort])
-            ts_result.extend(list(ts[i_sort]))
-            lengths_tensor.data[i] = lengths[i_sort] 
-            ts_lengths_new[i] = ts_lengths[i_sort]
-
-        return xs_tensor, lengths_tensor, torch.LongTensor(ts_result).to(DEVICE), ts_onehot_tensor, ts_onehot_LS_tensor, torch.LongTensor(ts_lengths_new)
-
-    else:
-        if hp.encoder_type == 'CNN':
-            xs_tensor = torch.zeros((1, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
-        else:
-            xs_tensor = torch.zeros((1, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
-        lengths_tensor = torch.zeros((1), dtype=torch.int64, device=DEVICE)
-        for i, i_sort in enumerate(arg_lengths):
-            xs_tensor.data[i, 0:lengths[i_sort]] = torch.from_numpy(xs[i_sort])
-            lengths_tensor.data[i] = lengths[i_sort] 
-        return  xs_tensor, lengths_tensor
+#def sort_pad(xs, lengths, ts=None, ts_onehot=None, ts_onehot_LS=None, ts_lengths=None):
+#    """
+#    To sort "lengths" order.
+#    This funtion is needed for "torch.nn.utils.rnn.pack_padded_sequence()"
+#
+#    Args:
+#        xs : input feature. (BATCH SIZE, time frames, log mel-scale filter bank)
+#        ts : grand truth data (BATCH SIZE, label lengths)
+#        ts_onehot : grand truth data which is an onehot vector (BATCH SIZE, label lengths, #labels)
+#        ts_onehot_LS : grand truth data which is a vector for label smoothing (BATCH SIZE, label lengths, #labels)
+#        lengths : the lengths of the input feature (BATCH SIZE)
+#        ts_lengths : the lengths of grand truth data (BATCH SIZE)
+#
+#    Returns:
+#        xs_tensor : "torch FloatTensor" of sorted xs
+#        ts_results : list of sorted ts
+#        ts_onehot_tensor : "torch FloatTensor" of sorted ts_onehot
+#        lengths : sorted lenghts
+#    """
+#    def argsort(seq):
+#        return np.argsort(np.array(seq))[::-1].tolist()
+#    arg_lengths = argsort(lengths)
+#    maxlen = max(lengths)
+#    
+#    if hp.encoder_type != 'Wave':
+#        input_size = hp.lmfb_dim * hp.frame_stacking if hp.frame_stacking else hp.lmfb_dim
+#    else:
+#        input_size = 1
+#        
+#    if (ts is not None) and (ts_lengths is not None) and (ts_onehot_LS is not None):
+#        if hp.encoder_type == 'CNN':
+#            xs_tensor = torch.zeros((hp.batch_size, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
+#        else:
+#            xs_tensor = torch.zeros((hp.batch_size, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
+#        ts_maxlen = max(ts_lengths)
+#        ts_onehot_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32,
+#                                device=DEVICE, requires_grad=True)
+#        ts_onehot_LS_tensor = torch.zeros((hp.batch_size, ts_maxlen, hp.num_classes), dtype=torch.float32,
+#                                device=DEVICE, requires_grad=True)
+#        lengths_tensor = torch.zeros((hp.batch_size), dtype=torch.int64, device=DEVICE)
+#        ts_lengths_new = copy.deepcopy(ts_lengths)
+#        ts_result = []
+#        for i, i_sort in enumerate(arg_lengths):
+#            xs_tensor.data[i, 0:lengths[i_sort]] = torch.from_numpy(xs[i_sort])
+#            ts_onehot_tensor.data[i, 0:ts_lengths[i_sort]] = torch.from_numpy(ts_onehot[i_sort])
+#            ts_onehot_LS_tensor.data[i, 0:ts_lengths[i_sort]] = torch.from_numpy(ts_onehot_LS[i_sort])
+#            ts_result.extend(list(ts[i_sort]))
+#            lengths_tensor.data[i] = lengths[i_sort] 
+#            ts_lengths_new[i] = ts_lengths[i_sort]
+#
+#        return xs_tensor, lengths_tensor, torch.LongTensor(ts_result).to(DEVICE), ts_onehot_tensor, ts_onehot_LS_tensor, torch.LongTensor(ts_lengths_new)
+#
+#    else:
+#        if hp.encoder_type == 'CNN':
+#            xs_tensor = torch.zeros((1, maxlen, 3, input_size // 3), dtype=torch.float32, device=DEVICE, requires_grad=True)
+#        else:
+#            xs_tensor = torch.zeros((1, maxlen, input_size), dtype=torch.float32, device=DEVICE, requires_grad=True)
+#        lengths_tensor = torch.zeros((1), dtype=torch.int64, device=DEVICE)
+#        for i, i_sort in enumerate(arg_lengths):
+#            xs_tensor.data[i, 0:lengths[i_sort]] = torch.from_numpy(xs[i_sort])
+#            lengths_tensor.data[i] = lengths[i_sort] 
+#        return  xs_tensor, lengths_tensor
 
 def load_model(model_file):
     """
@@ -184,9 +185,6 @@ def adjust_learning_rate(optimizer, epoch):
         for param_group in optimizer.param_groups:
             param_group['lr'] *= 0.8 
 
-#def overwritten_hparams():
-#    pass
-
 def spec_aug(x):
     # x is B x T x F
     aug_F = 15
@@ -209,10 +207,13 @@ def spec_aug(x):
     return x
 
 def overwrite_hparams(args):
-    # if args.hparams:
-    #     import args.hparams as hparams_overwrite
-    #     hp = hparams_overwrite
-    # else:
+   # if args.hparams:
+   #     import importlib
+   #     hparams_file, ext = os.path.splitext(os.path.basename(args.hparams))
+   #     hparams_overwrite = importlib.import_module(hparams_file)
+   #     hp = hparams_overwrite
+   #     import pdb;pdb.set_trace()
+   # else:
     for key, value in args._get_kwargs():
-        if value is not None and value != 'load_name':
+        if value is not None and value != 'load_name' and value != 'hp_file':
             setattr(hp, key, value)
