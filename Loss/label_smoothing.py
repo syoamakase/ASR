@@ -13,6 +13,14 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #     def __init__(self):
 #         super(LabelSmoothingLoss, self).__init__()
 
-def label_smoothing_loss(predict_ts, ls_target):
-    loss = -(F.log_softmax(predict_ts, dim=1) * ls_target).sum()
+def label_smoothing_loss(predicted_label, target, text_lengths, eps=0.1):
+    loss = 0.0
+    B, T, L = predicted_label.shape
+    log_prob = F.log_softmax(predicted_label, dim=2)
+    onehot = torch.zeros((B * T, L)).cuda().scatter(1, target.view(-1, 1), 1)
+    onehot = onehot * (1 - eps) + (1 - onehot) * eps / (L - 1)
+    onehot = onehot.view(B, T, L)
+    for i, t in enumerate(text_lengths):
+        loss += -(onehot[i, :t-1, :] * log_prob[i, :t-1, :]).sum() / (t-1)
+    loss /= B
     return loss

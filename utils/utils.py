@@ -6,6 +6,7 @@ import os
 import sys
 import torch
 import torch.nn as nn
+from shutil import copyfile
 
 #import hparams as hp
 from utils import hparams as hp
@@ -42,12 +43,17 @@ def load_dat(filename):
     fh.close()
     return dat
 
-def frame_stacking(x, stack):
+def frame_stacking(x, x_lengths, stack):
+    batch_size = x.shape[0]
+    newlen = x.shape[1] // stack
+    x_lengths = x_lengths // stack
+    stacked_x = x[:, 0:newlen*stack].reshape(batch_size, newlen, hp.lmfb_dim * stack)
+    return stacked_x, x_lengths
+
+def frame_stacking_legacy(x, stack):
     newlen = len(x) // stack
     stacked_x = x[0:newlen*stack].reshape(newlen, hp.lmfb_dim * stack)
     return stacked_x
-    
-    return cpudat, newlen
 
 def onehot(labels, num_output):
     """
@@ -206,14 +212,13 @@ def spec_aug(x):
 
     return x
 
+def save_hparams(base_file, save_file):
+    if os.path.exists(save_file):
+        pass
+    else:
+        copyfile(base_file, save_file)
+
 def overwrite_hparams(args):
-   # if args.hparams:
-   #     import importlib
-   #     hparams_file, ext = os.path.splitext(os.path.basename(args.hparams))
-   #     hparams_overwrite = importlib.import_module(hparams_file)
-   #     hp = hparams_overwrite
-   #     import pdb;pdb.set_trace()
-   # else:
     for key, value in args._get_kwargs():
-        if value is not None and value != 'load_name' and value != 'hp_file':
-            setattr(hp, key, value)
+        if value is not None and value != 'load_name':
+            setattr(hp, key, value) 
