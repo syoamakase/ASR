@@ -29,17 +29,14 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train_loop(model, optimizer, train_set, scheduler=None):
     datasets = Datasets.get_dataset(hp.train_script)
-    dataloader = DataLoader(datasets, batch_size=40, num_workers=4, collate_fn=Datasets.collate_fn)
-    pbar = tqdm(dataloader)
-    for d in pbar:
+    dataloader = DataLoader(datasets, batch_size=hp.batch_size, num_workers=16, collate_fn=Datasets.collate_fn, drop_last=True)
+    #pbar = tqdm(dataloader)
+    #for d in pbar:
+    for d in dataloader:
         if scheduler:
             scheduler.step(epoch)
 
         text, mel_input, pos_text, pos_mel, text_lengths, mel_lengths = d
-
-        if hp.use_spec_aug:
-            T = min(mel_input.shape[1] // 2 - 1, 40)
-            mel_input = utils_specaug.time_mask(utils_specaug.freq_mask(mel_input.clone().unsqueeze(0).transpose(1, 2), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0)
 
         text = text.to(DEVICE)
         mel_input = mel_input.to(DEVICE)
@@ -47,16 +44,13 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         pos_mel = pos_mel.to(DEVICE)
         text_lengths = text_lengths.to(DEVICE)
 
-        text_input = text[:, :-1]
-
         if hp.frame_stacking > 1 and hp.encoder_type != 'Wave':
             mel_input, mel_lengths = frame_stacking(mel_input, mel_lengths, hp.frame_stacking)
 
-        predict_ts = model(mel_input, mel_lengths, text_input)
+        predict_ts = model(mel_input, mel_lengths, text)
         
         if hp.decoder_type == 'Attention':
-            target = text[:, 1:].contiguous().view(-1)
-            loss = label_smoothing_loss(predict_ts, target, text_lengths)
+            loss = label_smoothing_loss(predict_ts, text, text_lengths)
         elif hp.decoder_type == 'CTC':
             predict_ts = F.log_softmax(predict_ts, dim=2).transpose(0, 1)
             loss = F.ctc_loss(predict_ts, text, mel_lengths, text_lengths, blank=hp.num_classes)
@@ -70,12 +64,12 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         optimizer.zero_grad()
         # backward
         loss.backward()
-        clip = 1.0
+        clip = 2.0
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
         # optimizer update
         optimizer.step()
         loss.detach()
-        torch.cuda.empty_cache()
+        #torch.cuda.empty_cache()
 
 def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
     for epoch in range(start_epoch, hp.max_epoch):
