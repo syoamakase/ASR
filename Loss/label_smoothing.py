@@ -21,6 +21,10 @@ def label_smoothing_loss(predicted_label, target, text_lengths, eps=0.1):
     onehot = onehot * (1 - eps) + (1 - onehot) * eps / (L - 1)
     onehot = onehot.view(B, T, L)
     for i, t in enumerate(text_lengths):
-        loss += -(onehot[i, :t-1, :] * log_prob[i, :t-1, :]).sum() / (t-1)
-    loss /= B
+        loss += -(onehot[i, :t, :] * log_prob[i, :t, :]).sum() / t
+    #loss /= B
+    return loss
+
+def label_smoothing_loss_legacy(y_pred, y):
+    loss = -(F.log_softmax(y_pred, dim=1) * y).sum()
     return loss
