@@ -1,0 +1,13 @@
+# perl id2char.pl results.txt > predict.txt
+
+home_tool=/home/ueno/evaluate/bpe/tedlium2
+
+#type_results=`python ${home_tool}/check_type.py`
+#if "${type_results}"; then 
+perl ${home_tool}/id2char.pl $1 > tmp
+nkf -e tmp > predict.txt
+#else
+#  cat icounv 
+python ${home_tool}/parse.py
+#/n/rd23/ueno/LM/local_bin/htk/bin/HResults -f -I /n/work1/ueno/data/tedlium2/ref.all /home/mimura/config/monophones predict_2.txt | grep WORD 
+/n/rd23/ueno/LM/local_bin/htk/bin/HResults -f -I /n/rd25/mimura/asr/transformer/modified/cnn/tedlium/tedlium2/bpe1k/eval/results/ref.all /home/mimura/config/monophones predict_2.txt #| grep WORD 
