@@ -1,10 +1,10 @@
 
 #max_seqlen = 58000
 #max_seqlen = 75000
-max_seqlen = 200000
-batch_size = None
+max_seqlen = 200000 #100000 or None
+batch_size = None # None or 120
 warmup_step = 25000
-warmup_factor = 5.0
+warmup_factor = 2.0
 
 #better
 vocab_size = 1059
