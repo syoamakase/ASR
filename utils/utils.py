@@ -8,14 +8,14 @@ import torch
 import torch.nn as nn
 from shutil import copyfile
 
-#import hparams as hp
 from utils import hparams as hp
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def log_config():
-    print('PID = {}'.format(os.getpid()))
-    print('cuda device = {}'.format(os.environ['CUDA_VISIBLE_DEVICES']))
+    print(f'PID = {os.getpid()}')
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        print('cuda device = {}'.format(os.environ['CUDA_VISIBLE_DEVICES']))
     for key in hp.__dict__.keys():
         if not '__' in key:
             print('{} = {}'.format(key, eval('hp.'+key)))
@@ -29,7 +29,7 @@ def load_dat(filename):
         filename : file name to read htk file
 
     Returns:
-        dat : 120 (means log mel-scale filter bank) x T (time frame)
+        dat : (log mel-scale filter bank dim) x (time frame)
 
     """
     fh = open(filename, "rb")
@@ -187,9 +187,14 @@ def init_weight(m):
             m.bias.data.fill_(0)
 
 def adjust_learning_rate(optimizer, epoch):
-    if epoch > 20:
-        for param_group in optimizer.param_groups:
-            param_group['lr'] *= 0.8 
+    if hp.reset_optimizer_epoch is not None:
+        if (epoch % hp.reset_optimizer_epoch) > hp.lr_adjust_epoch:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.8 
+    else:
+        if epoch > hp.lr_adjust_epoch:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.8 
 
 def spec_aug(x):
     # x is B x T x F
@@ -212,13 +217,15 @@ def spec_aug(x):
 
     return x
 
-def save_hparams(base_file, save_file):
-    if os.path.exists(save_file):
-        pass
-    else:
-        copyfile(base_file, save_file)
-
 def overwrite_hparams(args):
     for key, value in args._get_kwargs():
         if value is not None and value != 'load_name':
             setattr(hp, key, value) 
+
+def fill_variables():
+    default_var = {'spm_model':None, 'T_norm':True, 'B_norm':False, 'save_per_epoch':1, 'lr_adjust_epoch': 20,
+                   'reset_optimizer_epoch': 40}
+    for key, value in default_var.items():
+        if not hasattr(hp, key):
+            print('{} is not found in hparams. defalut {} is used.'.format(key, value))
+            setattr(hp, key, value)
