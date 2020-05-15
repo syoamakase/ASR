@@ -5,11 +5,13 @@ import scipy
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import warnings
 
-#import hparams as hp
 from utils import hparams as hp
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# Use warning filter because lstm warning displays per iter. 
+warnings.simplefilter('ignore')
 
 class Encoder(nn.Module):
     def __init__(self):
@@ -23,7 +25,7 @@ class Encoder(nn.Module):
 
     def forward(self, x, lengths):
         total_length = x.size(1)
-        x = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True)
+        x = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
         h, _ = self.bi_lstm(x)
         hbatch, lengths = nn.utils.rnn.pad_packed_sequence(h, batch_first=True, total_length=total_length)
         return hbatch

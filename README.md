@@ -26,8 +26,8 @@ We recommend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/)
 
 ### Train
 
-`<file name> <label sequence (int)>`  
-file1.npy 1 2 3 4
+`<file name>|<label sequence (int)>`  
+file1.npy|1 2 3 4
 
 ### Test
 
@@ -61,9 +61,14 @@ We trained 40 epochs and chose minimum WER from 40 epochs model.
 |-------------|---------:|---------:|----------:|----------:|
 |100h         |xx.xx     |xx.xx     |xx.xx      |xx.xx      |
 |960h(word)   |6.23      |14.41     |6.29       |14.94      |
-|960h(5k BPE) |4.99      |13.64     |4.96       |13.51      |
-|960h(10k BPE)|5.12      |13.64     |5.33       |14.26      |     
+|960h(1k BPE) |4.41      |12.44     |4.58       |12.52      |
 
+
+## Tedlium2
+
+|                           |dev       | test     |
+|---------------------------|---------:|---------:|
+|Attention + 40 (flat start)|12.88     |10.84     |
 
 ## For previous version developers
 

@@ -13,7 +13,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #     def __init__(self):
 #         super(LabelSmoothingLoss, self).__init__()
 
-def label_smoothing_loss(predicted_label, target, text_lengths, eps=0.1):
+def label_smoothing_loss(predicted_label, target, text_lengths, T_norm=True, B_norm=False, eps=0.1):
     loss = 0.0
     B, T, L = predicted_label.shape
     log_prob = F.log_softmax(predicted_label, dim=2)
@@ -21,8 +21,12 @@ def label_smoothing_loss(predicted_label, target, text_lengths, eps=0.1):
     onehot = onehot * (1 - eps) + (1 - onehot) * eps / (L - 1)
     onehot = onehot.view(B, T, L)
     for i, t in enumerate(text_lengths):
-        loss += -(onehot[i, :t, :] * log_prob[i, :t, :]).sum() / t
-    #loss /= B
+        if T_norm:
+            loss += -(onehot[i, :t, :] * log_prob[i, :t, :]).sum() / t
+        else:
+            loss += -(onehot[i, :t, :] * log_prob[i, :t, :]).sum()
+    if B_norm:
+        loss /= B
     return loss
 
 def label_smoothing_loss_legacy(y_pred, y):
