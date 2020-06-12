@@ -8,7 +8,7 @@ parser.add_argument('csj_path')
 args = parser.parse_args()
 filename = args.segment
 wavscp = args.wavscp
-csj_path = args.csj_path
+csj_path = os.path.abspath(args.csj_path)
 
 file_dict = {}
 with open(wavscp) as f:
