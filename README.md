@@ -34,11 +34,6 @@ file1.npy|1 2 3 4
 `<file name>`
 file1.npy
 
-## Notice
-
-- When `debug_mode = 'visdom'` and you use a remote server, specify a visdom server's ip address in `viz = Visdom()` of train.py  
-  ex) `viz = Visdom('192.168.0.2')`
-
 
 ## Results
 
@@ -61,7 +56,7 @@ We trained 40 epochs and chose minimum WER from 40 epochs model.
 |-------------|---------:|---------:|----------:|----------:|
 |100h         |xx.xx     |xx.xx     |xx.xx      |xx.xx      |
 |960h(word)   |6.23      |14.41     |6.29       |14.94      |
-|960h(1k BPE) |4.41      |12.44     |4.58       |12.52      |
+|960h(1k BPE) |4.05      |11.62     |4.19       |11.88      |
 
 
 ## Tedlium2
@@ -79,7 +74,6 @@ You can use previous version's model when you specify `legacy = True` in hparams
 - More faster `tools/calc_wer.py` 
 - preprocess (CSJ, Librispeech)
 - shallow fusion
-- real-time version
 
 ## Reference
 

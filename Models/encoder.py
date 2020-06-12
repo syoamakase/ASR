@@ -16,71 +16,68 @@ warnings.simplefilter('ignore')
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()
-        if hp.frame_stacking:
+        if hp.frame_stacking > 1:
             input_size = hp.lmfb_dim * hp.frame_stacking
+        elif hp.encoder_type == 'CNN':
+            self.cnn_encoder = CNN_embedding(hp.lmfb_dim, 128)
+            input_size = hp.lmfb_dim//4 * 128
         else:
-            input_size = hp.lmfb_dim
-        self.bi_lstm = nn.LSTM(input_size=input_size, hidden_size=hp.num_hidden_nodes, num_layers=hp.num_encoder_layer, \
+            input_size = hp.lmfb_dim * hp.frame_stacking
+        self.bi_lstm = nn.LSTM(input_size=input_size, hidden_size=hp.num_hidden_nodes_encoder, num_layers=hp.num_encoder_layer, \
                 batch_first=True, dropout=hp.encoder_dropout, bidirectional=True)
 
     def forward(self, x, lengths):
-        total_length = x.size(1)
+        if hp.encoder_type == 'CNN':
+            x, lengths = self.cnn_encoder(x, lengths)
+        total_length = x.shape[1]
         x = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
         h, _ = self.bi_lstm(x)
         hbatch, lengths = nn.utils.rnn.pad_packed_sequence(h, batch_first=True, total_length=total_length)
         return hbatch
     
-class CNN_Encoder(nn.Module):
-    def __init__(self):
-        super(CNN_Encoder, self).__init__()
-        # encoder_cnn
-        self.conv1 = nn.Conv2d(in_channels = 3, out_channels = 32, kernel_size = (3, 3), 
-                        stride = (2, 2), padding = (1, 0)) 
-        self.conv1_bn = nn.BatchNorm2d(32)
+class CNN_embedding(nn.Module):
+    def __init__(self, idim, odim):
+        super().__init__()
 
-        self.conv2 = nn.Conv2d(in_channels = 32, out_channels = 32, kernel_size = (3, 3), 
-                        stride = (2, 2), padding = (1, 0)) 
-        self.conv2_bn = nn.BatchNorm2d(32)
-        # encoder
-        self.bi_lstm = nn.LSTM(input_size=640, hidden_size=hp.num_hidden_nodes, num_layers=hp.num_encoder_layer,
-                         batch_first=True, dropout=hp.encoder_dropout, bidirectional=True)
+        self.conv1_1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1)
+        self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+        # self.batch_norm_1 = nn.BatchNorm2d(odim)
+        # self.layer_norm_1 = nn.LayerNorm(odim * idim)
+        
+        self.conv2_1 = torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+        self.conv2_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
+        # self.batch_norm_2 = nn.BatchNorm2d(odim)
+        self.instance_norm = nn.InstanceNorm2d(128)
+        # self.pool_1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # self.pool_2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # self.dropout = nn.Dropout(0.2)
 
-    def forward(self, x, lengths):
-        batch_size = x.size(0)
-        conv_out = self.conv1(x.permute(0, 2, 3, 1)) 
-        batched = self.conv1_bn(conv_out)
-        activated = F.relu(batched)
-        conv_out = self.conv2(activated)
-        batched = self.conv2_bn(conv_out)
-        activated = F.relu(batched)
+        #self.out = nn.Linear(odim * idim, hp.num_hidden_nodes_encoder)
 
-        cnnout = activated.permute(0, 3, 1, 2).reshape(batch_size, activated.size(3), -1) 
+    def forward(self, x, x_length):
+        x = x.unsqueeze(1)
+        x = torch.relu(self.conv1_1(x))
+        x = torch.relu(self.conv1_2(x))
+        x = F.max_pool2d(x, 2, stride=2, ceil_mode=True)
 
-        newlengths = []
-        for xlen in lengths.cpu().numpy():
-            q1, mod1 = divmod(xlen, 2)
-            if mod1 == 0:
-                xlen1 = xlen // 2 - 1
-                q2, mod2 = divmod(xlen1, 2)
-                if mod2 == 0:
-                    xlen2 = xlen1 // 2 - 1
-                else:
-                    xlen2 = (xlen1 - 1) // 2
-            else:
-                xlen1 = (xlen - 1) // 2
-                q2, mod2 = divmod(xlen1, 2)
-                if mod2 == 0:
-                    xlen2 = xlen1 // 2 - 1
-                else:
-                    xlen2 = (xlen1 - 1) // 2
-            newlengths.append(xlen2)
+        x = torch.relu(self.conv2_1(x))
+        x = torch.relu(self.conv2_2(x))
+        x = F.max_pool2d(x, 2, stride=2, ceil_mode=True)
+        x = self.instance_norm(x)
+        b, c, t, f = x.size()
+        x = x.transpose(1, 2).contiguous().view(b, t, c*f)
+        # x = self.layer_norm_1(x.transpose(1, 2).contiguous().view(b, t, c*f)).view(b, t, c, f).transpose(1, 2)
+        # x = self.conv_2(x)
+        # x = self.batch_norm_2(x)
+        # b, c, t, f = x.size()
+        # x = self.layer_norm_2(x.transpose(1, 2).contiguous().view(b, t, c*f))
+        # x = torch.relu(x)
+        # x = self.dropout(x)
+        # x = self.pool_1(x)
+        # x = self.pool_2(x)
+        #x = self.out(x)
 
-        cnnout_packed = nn.utils.rnn.pack_padded_sequence(cnnout, newlengths, batch_first=True)
-
-        h, _ = self.bi_lstm(cnnout_packed)
-
-        hbatch, newlengths = nn.utils.rnn.pad_packed_sequence(h, batch_first=True)
-        return hbatch
+        return x, torch.ceil(torch.ceil(x_length/2.0)/2.0)
 
 class WaveEncoder(nn.Module):
     def __init__(self, hp):
