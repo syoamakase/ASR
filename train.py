@@ -5,38 +5,33 @@ import glob
 import itertools
 import numpy as np
 import os
-from scipy import fromstring, int16
 import sys
-import torch
-from torch.utils.data import DataLoader
-import torch.nn.functional as F
-import torch.nn as nn
-import wave
-from tqdm import tqdm
 import time
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
-#import hparams as hp
 from utils import hparams as hp
 from Models.AttModel import AttModel
 from Models.CTCModel import CTCModel
 from utils.utils import frame_stacking, onehot, load_dat, log_config, load_model, init_weight, adjust_learning_rate, spec_aug, fill_variables
 from Loss.label_smoothing import label_smoothing_loss
-from legacy.model import Model
 import datasets
-
-import utils_specaug
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def train_loop(model, optimizer, train_set, scheduler=None):
+def train_loop(model, optimizer, epoch):
     dataset_train = datasets.get_dataset(hp.train_script)
-    dataloader = DataLoader(dataset_train, batch_size=hp.batch_size, num_workers=1, collate_fn=datasets.collate_fn, drop_last=True)
+    dataloader = DataLoader(dataset_train, batch_size=hp.batch_size, num_workers=4, collate_fn=datasets.collate_fn, drop_last=True)
     #pbar = tqdm(dataloader)
     #for d in pbar:
+    step = 0
+    len_train = len(dataloader)
     for d in dataloader:
-        if scheduler:
-            scheduler.step(epoch)
-
+        step += 1
         text, mel_input, pos_text, pos_mel, text_lengths, mel_lengths = d
 
         text = text.to(DEVICE)
@@ -72,26 +67,26 @@ def train_loop(model, optimizer, train_set, scheduler=None):
         # optimizer update
         optimizer.step()
         loss.detach()
-        if hp.debug_mode == 'visdom':
-            viz.line(X=np.array([i]), Y=np.array([loss.item()]), win='loss', name='train_loss', update='append')
+        if hp.debug_mode == 'tensorboard':
+            writer.add_scalar("Loss/train", loss, epoch*len_train+step)
         else:
             print('loss = {}'.format(loss.item()))
 
         sys.stdout.flush()
         #torch.cuda.empty_cache()
 
-def train_epoch(model, optimizer, train_set, scheduler=None, start_epoch=0):
+def train_epoch(model, optimizer, start_epoch=0):
     for epoch in range(start_epoch, hp.max_epoch):
         start_time = time.time()
-        train_loop(model, optimizer, train_set, scheduler)
-        if (epoch + 1) % hp.save_per_epoch == 0:
+        train_loop(model, optimizer, epoch)
+        if (epoch + 1) % hp.save_per_epoch == 0 or (epoch+1) % hp.reset_optimizer_epoch > 30:
             torch.save(model.state_dict(), hp.save_dir+"/network.epoch{}".format(epoch+1))
             torch.save(optimizer.state_dict(), hp.save_dir+"/network.optimizer.epoch{}".format(epoch+1))
         adjust_learning_rate(optimizer, epoch+1)
         if (epoch+1) % hp.reset_optimizer_epoch == 0:
             optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
         print("EPOCH {} end".format(epoch+1))
-        print(f'elapsed time = {time.time() - start_time}')
+        print(f'elapsed time = {(time.time()-start_time)//60}m')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -103,21 +98,14 @@ if __name__ == "__main__":
     fill_variables()
     os.makedirs(hp.save_dir, exist_ok=True)
 
-    try:
-        from visdom import Visdom
-        viz = Visdom()
-    except:
-        if hp.debug_mode == 'visdom':
-            raise ModuleNotFoundError
+    if hp.debug_mode == 'tensorboard':
+        writer = SummaryWriter(f'runs/{hp.save_dir}/{hp.comment}')
 
     log_config()
-    if hp.legacy:
-        model = Model()
-    else:
-        if hp.decoder_type == 'Attention':
-            model = AttModel()
-        elif hp.decoder_type == 'CTC':
-            model = CTCModel()
+    if hp.decoder_type == 'Attention':
+        model = AttModel()
+    elif hp.decoder_type == 'CTC':
+        model = CTCModel()
      
     model.apply(init_weight)
 
@@ -147,9 +135,4 @@ if __name__ == "__main__":
         else:
             optimizer.load_state_dict(torch.load(os.path.join(hp.load_checkpoints_path, 'network.optimizer.epoch{}'.format(load_epoch))))
 
-    train_set = []
-    with open(hp.train_script) as f:
-        for line in f:
-            train_set.append(line)
-
-    train_epoch(model, optimizer, train_set, start_epoch=load_epoch)
+    train_epoch(model, optimizer, start_epoch=load_epoch)

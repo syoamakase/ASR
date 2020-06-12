@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
-from torch.autograd import Variable
+import torch.nn.functional as F
 
-#import hparams as hp
 from utils import hparams as hp
 
 class Attention(nn.Module):
@@ -17,10 +14,11 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         # only 'conv'
         self.mode = mode
-        self.num_decoder_hidden_nodes = hp.num_hidden_nodes
+        self.num_decoder_hidden_nodes = hp.num_hidden_nodes_decoder
+        self.num_encoder_hidden_nodes = hp.num_hidden_nodes_encoder
         # attention
         self.L_se = nn.Linear(self.num_decoder_hidden_nodes, self.num_decoder_hidden_nodes * 2, bias=False)
-        self.L_he = nn.Linear(self.num_decoder_hidden_nodes * 2, self.num_decoder_hidden_nodes * 2)
+        self.L_he = nn.Linear(self.num_encoder_hidden_nodes * 2, self.num_decoder_hidden_nodes * 2)
         self.L_ee = nn.Linear(self.num_decoder_hidden_nodes * 2, 1, bias=False)
         # conv attention
         self.L_fe = nn.Linear(10, self.num_decoder_hidden_nodes * 2, bias=False)

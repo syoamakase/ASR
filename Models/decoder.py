@@ -15,18 +15,19 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
-        self.num_decoder_hidden_nodes = hp.num_hidden_nodes
+        self.num_decoder_hidden_nodes = hp.num_hidden_nodes_decoder
+        self.num_encoder_hidden_nodes = hp.num_hidden_nodes_encoder
         self.num_classes = hp.num_classes
         self.att = Attention(hp)
         # decoder
         self.L_sy = nn.Linear(self.num_decoder_hidden_nodes, self.num_decoder_hidden_nodes, bias=False)
-        self.L_gy = nn.Linear(self.num_decoder_hidden_nodes * 2, self.num_decoder_hidden_nodes)
+        self.L_gy = nn.Linear(self.num_encoder_hidden_nodes * 2, self.num_decoder_hidden_nodes)
         self.L_yy = nn.Linear(self.num_decoder_hidden_nodes, self.num_classes)
 
         self.L_ys = nn.Embedding(self.num_classes, self.num_decoder_hidden_nodes * 4)
         #self.L_ys = nn.Linear(self.num_classes, self.num_decoder_hidden_nodes * 4 , bias=False)
         self.L_ss = nn.Linear(self.num_decoder_hidden_nodes, self.num_decoder_hidden_nodes * 4, bias=False)
-        self.L_gs = nn.Linear(self.num_decoder_hidden_nodes * 2, self.num_decoder_hidden_nodes * 4)
+        self.L_gs = nn.Linear(self.num_encoder_hidden_nodes * 2, self.num_decoder_hidden_nodes * 4)
 
     def forward(self, hbatch, lengths, targets):
         batch_size = hbatch.size(0)
@@ -120,6 +121,77 @@ class Decoder(nn.Module):
                 for character in token_beam_sel[0][0]:
                     results.append(character)
                 break
+        return results
+
+    def decode_v2(self, hbatch, lengths, model_lm=None):
+        """
+        decode function with a few modification.
+        1. Add the candidate when the prediction is </s>
+        """
+        batch_size = hbatch.size(0)
+        num_frames = hbatch.size(1)
+        e_mask = torch.ones((batch_size, num_frames, 1), device=DEVICE, requires_grad=False)
+
+        token_beam_sel = [([], 0.0, (torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
+                        torch.zeros((batch_size, self.num_decoder_hidden_nodes), device=DEVICE, requires_grad=False),
+                        torch.zeros((batch_size, 1, num_frames), device=DEVICE, requires_grad=False)))]
+
+        for i, tmp in enumerate(lengths):
+            if tmp < num_frames:
+                e_mask[i, tmp:] = 0.0
+
+        for _ in range(hp.max_decoder_seq_len):
+            token_beam_all = []
+
+            for current_token in token_beam_sel:
+                cand_seq, cand_seq_score, (c, s, alpha) = current_token
+
+                g, alpha = self.att(s, hbatch, alpha, e_mask)
+                
+                # generate
+                y = self.L_yy(torch.tanh(self.L_gy(g) + self.L_sy(s)))
+
+                if hp.score_func == 'log_softmax':
+                    y = F.log_softmax(y, dim=1)
+                    if model_lm is not None and len(cand_seq) > 0:
+                        lm_input = torch.from_numpy(np.array([cand_seq])).to(DEVICE).long()
+                        lm_score = model_lm(lm_input)[:, -1, :]
+                        tmpy = y + hp.lm_weight * F.log_softmax(lm_score, dim=1)
+                    else:
+                        tmpy = y.clone()
+                elif hp.score_func == 'softmax':
+                    y = F.softmax(y, dim=1)
+                    if model_lm is not None:
+                        lm_input = torch.from_numpy(np.array([cand_seq])).to(DEVICE).long()
+                        lm_score = model_lm(lm_input)[:, -1, :]
+                        y = y + hp.lm_weight * F.softmax(lm_score, dim=1)
+                    else:
+                        tmpy = y.clone()
+                
+                for _ in range(hp.beam_width):
+                    bestidx = tmpy.data.argmax(1)
+
+                    tmpseq = cand_seq.copy()
+                    tmpseq.append(bestidx.item())
+
+                    tmpscore = cand_seq_score + tmpy.data[0][bestidx]
+                    tmpy.data[0][bestidx] = -10000000000.0
+
+                    rec_input = self.L_ys(bestidx) + self.L_ss(s) + self.L_gs(g)
+                    tmps, tmpc = self._func_lstm(rec_input, c)
+
+                    token_beam_all.append((tmpseq, tmpscore, (tmpc, tmps, alpha)))
+            sorted_token_beam_all = sorted(token_beam_all, key=itemgetter(1), reverse=True)
+            ###### ON GOING!!!!
+            results = {'score':[], 'result':[]}
+            if token_beam_sel[0][0][-1] == hp.eos_id:
+                for character in token_beam_sel[0][0]:
+                    results.append(character)
+                break
+            for beam_idx in hp.beam_width:
+                if token_beam_sel[beam_idx][0][-1] == hp.eos_id:
+                        raise NotImplementedError()
+            token_beam_sel = sorted_token_beam_all[:hp.beam_width]
         return results
     
     @staticmethod

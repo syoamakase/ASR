@@ -3,20 +3,16 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-import torch.nn as nn
-from torch.autograd import Variable
 
 from utils import hparams as hp
 
 from Models.decoder import Decoder
-from Models.encoder import Encoder, CNN_Encoder, WaveEncoder
+from Models.encoder import Encoder, WaveEncoder
 
 class AttModel(nn.Module):
     def __init__(self):
         super(AttModel, self).__init__()
-        if hp.encoder_type == 'CNN':
-            self.encoder = CNN_Encoder()
-        elif hp.encoder_type == 'Wave':
+        if hp.encoder_type == 'Wave':
             self.encoder = WaveEncoder()
         else:
             self.encoder = Encoder()
