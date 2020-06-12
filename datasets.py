@@ -13,7 +13,6 @@ import librosa
 import sentencepiece as spm
 
 from utils import hparams as hp
-import utils_specaug
 
 class TrainDatasets(Dataset):                                                     
     """
@@ -103,7 +102,7 @@ class TrainDatasets(Dataset):
             mel_input = np.load(mel_name)
             assert mel_input.shape[0] == hp.lmfb_dim or mel_input.shape[1] == hp.lmfb_dim, '{} does not have strange shape {}'.format(mel_name, mel_input.shape)
             if mel_input.shape[1] != hp.lmfb_dim:
-                mel_input = mel_input.reshape(-1, hp.lmfb_dim)
+                mel_input = mel_input.T
         elif '.htk' in mel_name:
             mel_input = self.load_htk(mel_name)[:,:hp.lmfb_dim]
         else:
@@ -116,7 +115,6 @@ class TrainDatasets(Dataset):
         if hp.use_spec_aug:
             mel_input = torch.from_numpy(mel_input)
             T = min(mel_input.shape[0] // 2 - 1, 50)
-            # mel_input = utils_specaug.time_mask(utils_specaug.freq_mask(mel_input.clone().unsqueeze(0).transpose(1, 2), num_masks=2), T=T, num_masks=2).transpose(1,2).squeeze(0)
             mel_input = self._time_mask(self._freq_mask(mel_input, F=25, num_masks=2), T=T, num_masks=2)
         # mel_input = np.concatenate([np.zeros([1,hp.num_mels], np.float32), mel[:-1,:]], axis=0)
         text_length = len(text)

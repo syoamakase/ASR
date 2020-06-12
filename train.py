@@ -99,7 +99,7 @@ if __name__ == "__main__":
     os.makedirs(hp.save_dir, exist_ok=True)
 
     if hp.debug_mode == 'tensorboard':
-        writer = SummaryWriter(f'runs/{hp.save_dir}/{hp.comment}')
+        writer = SummaryWriter(f'{hp.save_dir}/logs/{hp.comment}')
 
     log_config()
     if hp.decoder_type == 'Attention':
