@@ -3,16 +3,20 @@ This script doesn't include preprocess (segment wave files, tanscriptions, and w
 
 ## Requirements
 
-Python >= 3.6.0  
-PyTorch >= 1.0
+Python >= 3.7.0
+PyTorch >= 1.2.0
 
-We recommend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/).
+We highly recommend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/).
 
-## Quick Start
+## Installation
 
-### Installation
+For preprocess, we need [sentencepice](https://github.com/google/sentencepiece) and [HTK](http://htk.eng.cam.ac.uk/download.shtml)
 
 `pip install -r requirements.txt`
+
+## Preprocess
+
+`examples` directory is available corpus
 
 ### Train
 
@@ -20,20 +24,7 @@ We recommend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/)
 
 ### Test
 
-`python test.py --hp_file hparams.py`
-
-## File Format
-
-### Train
-
-`<file name>|<label sequence (int)>`  
-file1.npy|1 2 3 4
-
-### Test
-
-`<file name>`
-file1.npy
-
+`python test.py --load_name <model name>`
 
 ## Results
 
@@ -59,20 +50,17 @@ We trained 40 epochs and chose minimum WER from 40 epochs model.
 |960h(1k BPE) |4.05      |11.62     |4.19       |11.88      |
 
 
-## Tedlium2
+## Tedlium2 (1k BPE)
 
 |                           |dev       | test     |
 |---------------------------|---------:|---------:|
 |Attention + 40 (flat start)|12.88     |10.84     |
 
-## For previous version developers
-
-You can use previous version's model when you specify `legacy = True` in hparams.py.
 
 ## TODO
 
 - More faster `tools/calc_wer.py` 
-- preprocess (CSJ, Librispeech)
+- preprocess (Tedlium2, Librispeech)
 - shallow fusion
 
 ## Reference
