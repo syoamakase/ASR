@@ -64,7 +64,7 @@ python tools/feature_normalize.py -S data/train/mellist --ext htk --save_dir dat
 
 echo "----- End preparing acoustic features ----"
 echo "Start preparing script file"
-python tools/clean_text.py data/train/text > data/train/input.txt
+python tools/clean_text.py -S data/train/text > data/train/input.txt
 cut -d '|' -f 1- data/train/input.txt > data/train/input_sentencepice.txt
 mkdir -p data/train/sentencepice/${vocab_type}_${vocab_size}/
 spm_train --input=data/train/input_sentencepice.txt --model_prefix=data/train/sentencepice/${vocab_type}_${vocab_size}/model --vocab_size=${vocab_size} --character_coverage=1.0 --model_type=${vocab_type} --input_sentence_size=100000000 --bos_id=2 --eos_id=1 --unk_id=0
