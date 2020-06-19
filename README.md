@@ -1,5 +1,7 @@
 This is sequence-to-sequence speech recognition toolkit.
 
+https://github.com/syoamakase/ASR/stargazers
+
 ## Requirements
 
 Python >= 3.7.0  
