@@ -1,10 +1,9 @@
 This is sequence-to-sequence speech recognition toolkit.
-This script doesn't include preprocess (segment wave files, tanscriptions, and word labels).
 
 ## Requirements
 
-Python >= 3.7.0
-PyTorch >= 1.2.0
+Python >= 3.7.0  
+PyTorch >= 1.2.0  
 
 We highly recommend you to prepare [Anaconda 3](https://www.anaconda.com/distribution/).
 
@@ -16,7 +15,8 @@ For preprocess, we need [sentencepice](https://github.com/google/sentencepiece) 
 
 ## Preprocess
 
-`examples` directory is available corpus
+`examples/*/preprocess.sh` is a preprocess script.
+After `preprocess.sh`, you can get the training data and test data.
 
 ### Train
 
@@ -26,26 +26,18 @@ For preprocess, we need [sentencepice](https://github.com/google/sentencepiece) 
 
 `python test.py --load_name <model name>`
 
-## Results
+## Results WER[%]
 
 ## CSJ
 
-Table 1 shows word error rate (WER[%]) on CSJ corpus.  
-First rows mean training corpus and first columns mean test set.
-We trained 40 epochs and chose minimum WER from 40 epochs model.
-
-|            |units |#vocab |CSJ-APS|CSJ-SPS|
-|------------|-----:|------:|------:|------:|
-|CSJ-APS     |word  |19146  |10.68  |17.38  |
-|CSJ-SPS     |word  |24826  |21.97  |8.88   |
-|CSJ-APS+SPS |word  |34331  |9.56   |8.57   |
-|CSJ-APS+SPS |BPE-500|6027  |8.35   |6.64   |
+|                    |eval 1 |eval 2 |eval 3 |
+|--------------------|------:|------:|------:|
+|CSJ-APS+SPS (7k BPE)|8.86   |8.21   |6.28   |
 
 ## LibriSpeech
 
 |             |dev clean |dev other |test clean |test other |
 |-------------|---------:|---------:|----------:|----------:|
-|100h         |xx.xx     |xx.xx     |xx.xx      |xx.xx      |
 |960h(word)   |6.23      |14.41     |6.29       |14.94      |
 |960h(1k BPE) |4.05      |11.62     |4.19       |11.88      |
 
@@ -60,10 +52,10 @@ We trained 40 epochs and chose minimum WER from 40 epochs model.
 ## TODO
 
 - More faster `tools/calc_wer.py` 
-- preprocess (Tedlium2, Librispeech)
-- shallow fusion
+- preprocess (Librispeech)
+- shallow fusion (including LM training)
 
-## Reference
+## Reference paper
 
 ### We developed the attention model based on
 [1] Jan Chorowski, Dzmitry Bahdanau, Dmitriy Serdyuk, Kyunghyun Cho, and Yoshua Bengio, “Attention-based models for speech recognition,” in Advances in Neural InformationProcessing Systems (NIPS), 2015, pp.577–585.
@@ -73,3 +65,7 @@ We trained 40 epochs and chose minimum WER from 40 epochs model.
 
 ### We also used SpecAugment
 [3] Daniel S. Park, William Chan, Yu Zhang, Chung-Cheng Chiu, Barret Zoph, Ekin D. Cubuk, and Quoc V. Le, "SpecAugment: A Simple Data Augmentation Method for Automatic Speech Recognition" in Proc. Interspeech, 2019, pp.2613--2617.
+
+## Reference link
+
+[https://github.com/espnet/espnet](https://github.com/espnet/espnet)

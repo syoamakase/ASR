@@ -1,5 +1,0 @@
-#!/bin/bash
-CUDA_VISIBLE_DEVICES=1 python eval-transformer-cnn.py 20 1059 1 script.test $1 # > #results/result.multi.e12.d6.h4.d256.specaug.bucket120.average_epoch91-epoch100
-
-#sapy_gp0 eval-transformer-cnn-transformerlm.py 1059 1 script.test ../model.multi.e12.d6.h4.d256.specaug.bucket120/network.average_epoch91-epoch100 /n/rd25/mimura/asr/lm/tedlium2/bpe1k/model.6l.4h.mb120/network.epoch40 0.2 > results/result.lmtest.transformer.epoch40.w-0.2
-

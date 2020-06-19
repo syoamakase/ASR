@@ -1,5 +1,0 @@
-#!/bin/bash
-#SAVE_DIR=transformer.tedlium.1kbpe.25000factor2.0.conv2d_32_length_random_onetime
-SAVE_DIR=transformer.tedlium.1kbpe.25000factor2.0.conv2d_32_length_random_onetime_2gpu_torch_1.2.0
-
-/n/rd23/ueno/local/sacs/bin/python train-transformer_CNN_v5_init.py ${SAVE_DIR} > log.${SAVE_DIR} 
