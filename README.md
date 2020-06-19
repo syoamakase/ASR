@@ -1,6 +1,6 @@
 This is sequence-to-sequence speech recognition toolkit.
 
-https://img.shields.io/github/stars/syoamakase/ASR
+![stars.svg](https://img.shields.io/github/stars/syoamakase/ASR)
 
 ## Requirements
 
