@@ -1,6 +1,6 @@
 This is sequence-to-sequence speech recognition toolkit.
 
-https://github.com/syoamakase/ASR/stargazers
+https://img.shields.io/github/stars/syoamakase/ASR
 
 ## Requirements
 
