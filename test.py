@@ -20,17 +20,11 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def test_loop(model, test_set, model_lm):
     batch_size = 1
-    word_id = []
 
     if hp.spm_model is not None:
         sp = spm.SentencePieceProcessor()
         sp.Load(hp.spm_model)
 
-    if hp.word_file:
-        with open(hp.word_file) as f:
-            for line in f:
-                word, _ = line.split(' ', 1)
-                word_id.append(word)
     if hasattr(hp, 'mean_file') and hasattr(hp, 'var_file'):
         if hp.mean_file is not None and hp.var_file is not None:
             mean_value = np.load(hp.mean_file).reshape(-1, hp.lmfb_dim)
@@ -56,16 +50,15 @@ def test_loop(model, test_set, model_lm):
             cpudat /= var_value
 
             print('{}'.format(x_file), end=' ')
-            if hp.frame_stacking and hp.frame_stacking != 1:
-                cpudat = frame_stacking(cpudat, hp.frame_stacking)
 
             xs.append(torch.tensor(cpudat, device=DEVICE).float())
 
-        # xs, lengths = sort_pad(xs, lengths)
         xs_lengths = torch.tensor(np.array([len(x) for x in xs], dtype=np.int32), device = DEVICE)
         padded_xs = nn.utils.rnn.pad_sequence(xs, batch_first = True)
         sorted_xs_lengths, perm_index = xs_lengths.sort(0, descending = True)
         padded_sorted_xs = padded_xs[perm_index] 
+
+        padded_sorted_xs, sorted_xs_lengths = frame_stacking(padded_sorted_xs, sorted_xs_lengths, hp.frame_stacking)
 
         results = model.decode(padded_sorted_xs, sorted_xs_lengths, model_lm)
         if hp.spm_model:
@@ -80,10 +73,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--load_name')
     parser.add_argument('--hp_file', metavar='FILE', default='hparams.py')
-    parser.add_argument('--test_script', type=str, default=None)
-    parser.add_argument('--num_classes', type=int, default=None)
-    parser.add_argument('--eos_id', type=int, default=None)
-    parser.add_argument('--output_mode', type=str, default=None)
     parser.add_argument('--load_name_lm', type=str, default=None)
     parser.add_argument('--lm_weight', type=float, default=None)
     
