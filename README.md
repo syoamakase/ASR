@@ -24,9 +24,12 @@ After `preprocess.sh`, you can get the training data and test data.
 
 `python train.py --hp_file hparams.py`
 
+While you do a training, you can check the loss curve using tensorboard.
+After `tensorboard --logdir <log dir>` and accessing `localhost:6006` on your web browser, you can check.
+
 ### Test
 
-`python test.py --load_name <model name>`
+`python test.py --load_name <model name> --hp_file <hparams.py path>`
 
 ## Results WER[%]
 
@@ -40,8 +43,8 @@ After `preprocess.sh`, you can get the training data and test data.
 
 |             |dev clean |dev other |test clean |test other |
 |-------------|---------:|---------:|----------:|----------:|
-|960h(word)   |6.23      |14.41     |6.29       |14.94      |
-|960h(1k BPE) |4.05      |11.62     |4.19       |11.88      |
+|960h (word)  |6.23      |14.41     |6.29       |14.94      |
+|960h (1k BPE)|4.05      |11.62     |4.19       |11.88      |
 
 
 ## Tedlium2 (1k BPE)
