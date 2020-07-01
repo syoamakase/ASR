@@ -1,3 +1,5 @@
+**Don't use pytorch==1.4.0!!!!!!**
+
 This is sequence-to-sequence speech recognition toolkit.
 
 ![stars.svg](https://img.shields.io/github/stars/syoamakase/ASR)
