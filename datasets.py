@@ -114,8 +114,8 @@ class TrainDatasets(Dataset):
 
         if hp.use_spec_aug:
             mel_input = torch.from_numpy(mel_input)
-            T = min(mel_input.shape[0] // 2 - 1, 50)
-            mel_input = self._time_mask(self._freq_mask(mel_input, F=25, num_masks=2), T=T, num_masks=2)
+            T = min(mel_input.shape[0] // 2 - 1, 100)
+            mel_input = self._time_mask(self._freq_mask(mel_input, F=23, num_masks=1), T=T, num_masks=1)
         # mel_input = np.concatenate([np.zeros([1,hp.num_mels], np.float32), mel[:-1,:]], axis=0)
         text_length = len(text)
         mel_length = mel_input.shape[0]                              
