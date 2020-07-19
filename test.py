@@ -47,7 +47,7 @@ def test_loop(model, test_set, model_lm):
             elif '.npy' in x_file:
                 cpudat = np.load(x_file)
             cpudat -= mean_value
-            cpudat /= var_value
+            cpudat /= np.sqrt(self.var_value)
 
             print('{}'.format(x_file), end=' ')
 
@@ -92,10 +92,10 @@ if __name__ == "__main__":
     elif hp.decoder_type == 'CTC':
         model = CTCModel()
 
-    if args.load_name_lm is not None:
+    if hp.load_name_lm is not None:
         model_lm = Model_lm()
         model_lm.to(DEVICE)
-        model_lm.load_state_dict(load_model(args.load_name_lm))
+        model_lm.load_state_dict(load_model(hp.load_name_lm))
         model_lm.eval()
     else:
         model_lm = None

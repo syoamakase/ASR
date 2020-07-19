@@ -110,13 +110,12 @@ class TrainDatasets(Dataset):
         
         if hp.mean_file is not None and hp.var_file is not None:
             mel_input -= self.mean_value
-            mel_input /= self.var_value
+            mel_input /= np.sqrt(self.var_value)
 
         if hp.use_spec_aug:
             mel_input = torch.from_numpy(mel_input)
-            T = min(mel_input.shape[0] // 2 - 1, 100)
-            mel_input = self._time_mask(self._freq_mask(mel_input, F=23, num_masks=1), T=T, num_masks=1)
-        # mel_input = np.concatenate([np.zeros([1,hp.num_mels], np.float32), mel[:-1,:]], axis=0)
+            T = min(mel_input.shape[0] // 2 - 1, hp.max_width_T)
+            mel_input = self._time_mask(self._freq_mask(mel_input, F=hp.max_width_F, num_masks=hp.num_mask_F), T=T, num_masks=hp.num_mask_T)
         text_length = len(text)
         mel_length = mel_input.shape[0]                              
         pos_text = np.arange(1, text_length + 1)
