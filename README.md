@@ -27,11 +27,14 @@ After `preprocess.sh`, you can get the training data and test data.
 `python train.py --hp_file hparams.py`
 
 While you do a training, you can check the loss curve using tensorboard.
+When you set the specific gpu(s), please set such as `CUDA_VISIBLE_DEVICES=0`
 After `tensorboard --logdir <log dir>` and accessing `localhost:6006` on your web browser, you can check.
 
 ### Test
 
 `python test.py --load_name <model name> --hp_file <hparams.py path>`
+
+If you don't specify `--hp_file`, `test.py` searches the directory of <model name>
 
 ## Results WER[%]
 
@@ -53,7 +56,7 @@ After `tensorboard --logdir <log dir>` and accessing `localhost:6006` on your we
 
 |                           |dev       | test     |
 |---------------------------|---------:|---------:|
-|Attention + 40 (flat start)|12.88     |10.84     |
+|Attention + 40 (flat start)|12.29     |10.44     |
 
 
 ## TODO
