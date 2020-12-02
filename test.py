@@ -1,22 +1,22 @@
-# -*- coding: utf-8 
+# -*- coding: utf-8 -*-
 import argparse
-import copy
-import itertools
 import numpy as np
 import os
 import sys
 import sentencepiece as spm
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from utils import hparams as hp
 from Models.AttModel import AttModel
 from Models.CTCModel import CTCModel
 from Models.LM import Model_lm
+from utils import hparams as hp
+import utils
 from utils.utils import frame_stacking, load_dat, log_config, load_model, overwrite_hparams, fill_variables
+from text import text_to_sequence, sequence_to_text
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
 def test_loop(model, test_set, model_lm):
     batch_size = 1
@@ -39,7 +39,7 @@ def test_loop(model, test_set, model_lm):
     for i in range(len(test_set)):
         xs = []
         for j in range(batch_size):
-            s = test_set[i*batch_size+j].strip()
+            s = test_set[i * batch_size + j].strip()
             x_file = s.strip()
             if '.htk' in x_file:
                 cpudat = load_dat(x_file)
@@ -47,25 +47,28 @@ def test_loop(model, test_set, model_lm):
             elif '.npy' in x_file:
                 cpudat = np.load(x_file)
             cpudat -= mean_value
-            cpudat /= np.sqrt(self.var_value)
+            cpudat /= np.sqrt(var_value)
 
             print('{}'.format(x_file), end=' ')
 
             xs.append(torch.tensor(cpudat, device=DEVICE).float())
 
-        xs_lengths = torch.tensor(np.array([len(x) for x in xs], dtype=np.int32), device = DEVICE)
-        padded_xs = nn.utils.rnn.pad_sequence(xs, batch_first = True)
-        sorted_xs_lengths, perm_index = xs_lengths.sort(0, descending = True)
-        padded_sorted_xs = padded_xs[perm_index] 
+        xs_lengths = torch.tensor([len(x) for x in xs]).long()
+        padded_xs = nn.utils.rnn.pad_sequence(xs, batch_first=True)
+        sorted_xs_lengths, perm_index = xs_lengths.sort(0, descending=True)
+        padded_sorted_xs = padded_xs[perm_index]
 
         padded_sorted_xs, sorted_xs_lengths = frame_stacking(padded_sorted_xs, sorted_xs_lengths, hp.frame_stacking)
+        pos_mel = torch.arange(1, sorted_xs_lengths[0] + 1).to(DEVICE).unsqueeze(0)
 
-        results = model.decode(padded_sorted_xs, sorted_xs_lengths, model_lm)
+        #results = model.decode_v2(padded_sorted_xs, sorted_xs_lengths, model_lm, pos_mel)
+        results = model.decode(padded_sorted_xs, sorted_xs_lengths, model_lm, pos_mel)
         if hp.spm_model:
             print(sp.DecodeIds(results), end='')
         else:
             for character in results:
                 print(character, end=' ')
+                #print(sequence_to_text(character), end='')
         print()
         sys.stdout.flush()
 
@@ -73,6 +76,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--load_name')
     parser.add_argument('--hp_file', metavar='FILE', default='hparams.py')
+    parser.add_argument('--test_script', type=str, default=None)
     parser.add_argument('--load_name_lm', type=str, default=None)
     parser.add_argument('--lm_weight', type=float, default=None)
     
@@ -83,17 +87,22 @@ if __name__ == "__main__":
     if os.path.exists(os.path.join(load_dir, 'hparams.py')):
         args.hp_file = os.path.join(load_dir, 'hparams.py')
 
+    #hp = utils.HParams()
     hp.configure(args.hp_file)
+
     fill_variables()
     overwrite_hparams(args)
 
     if hp.decoder_type == 'Attention':
-        model = AttModel()
+        model = AttModel(hp)
     elif hp.decoder_type == 'CTC':
-        model = CTCModel()
+        model = CTCModel(hp)
 
     if hp.load_name_lm is not None:
-        model_lm = Model_lm()
+        hp_LM_path = os.path.join(os.path.dirname(hp.load_name_lm), 'hparams.py')
+        hp_LM = utils.HParams()
+        hp_LM.configure(hp_LM_path)
+        model_lm = Model_lm(hp_LM)
         model_lm.to(DEVICE)
         model_lm.load_state_dict(load_model(hp.load_name_lm))
         model_lm.eval()
