@@ -5,8 +5,6 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-import hparams as hp
-
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # class LabelSmoothingLoss(nn.Module):
