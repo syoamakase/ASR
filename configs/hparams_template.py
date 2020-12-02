@@ -2,13 +2,13 @@
 
 train_script = '' # training script
 spm_model = '' # sentencepiece model path
-test_script = '' # test script
-mean_file = None # or a path of mean.npy
-var_file = None # or a path of var.npy
-save_dir = 'checkpoints' # save path
+test_script = ''
+mean_file = ''
+var_file = ''
+save_dir = '' # save path
 num_classes = 1000
 eos_id = 1
-lmfb_dim = 80 # or 80 (English) or 40 (csj)
+lmfb_dim = 80
 comment = ''
 
 # When loding
@@ -27,7 +27,6 @@ decoder_type = 'Attention' #'CTC' #or 'Attention'
 
 # label smooting loss
 use_spec_aug = True
-# the loss is divided by the length of mel and batch size
 T_norm = True
 B_norm = False # fix? if True, not converge
 
