@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-import math
 import numpy as np
 import librosa
 import collections
@@ -11,16 +10,17 @@ import torch
 from torch.utils.data import Dataset, DataLoader, Sampler
 import sentencepiece as spm
 
+
 class TrainDatasets(Dataset):
     """
     Train dataset for ASR.
     """                                                   
     def __init__(self, csv_file, hp, use_spec_aug=False):
-        """                                                                     
-        Args:                                                                   
-            csv_file (string): Path to the csv file with annotations       
+        """
+        Args:
+            csv_file (string): Path to the csv file with annotations
             use_spec_aug (bool): Use SpecAugment or not
-        """                                                                     
+        """
         self.landmarks_frame = pd.read_csv(csv_file, sep='\|', header=None)
         self.use_spec_aug = use_spec_aug
         self.hp = hp
@@ -44,16 +44,16 @@ class TrainDatasets(Dataset):
             dat = np.fromfile(fh, dtype='float32')
             dat = dat.reshape(int(len(dat) / veclen), veclen)
             dat = dat.byteswap()
-        return dat                      
+        return dat
 
-    def __len__(self):                                                          
-        return len(self.landmarks_frame)                                        
+    def __len__(self):
+        return len(self.landmarks_frame)
 
     def _freq_mask(self, spec, F=10, num_masks=1, replace_with_zero=False):
         cloned = spec.clone()
         num_mel_channels = cloned.shape[1]
 
-        for _ in range(0, num_masks):        
+        for _ in range(0, num_masks):
             f = random.randrange(0, F)
             f_zero = random.randrange(0, num_mel_channels - f)
 
@@ -81,10 +81,10 @@ class TrainDatasets(Dataset):
 
             mask_end = random.randrange(t_zero, t_zero + t)
             if (replace_with_zero):
-                cloned[t_zero:mask_end,:] = 0
+                cloned[t_zero:mask_end, :] = 0
             else:
-                cloned[t_zero:mask_end,:] = cloned.mean()
-        return cloned 
+                cloned[t_zero:mask_end, :] = cloned.mean()
+        return cloned
 
     def __getitem__(self, idx):
         mel_name = self.landmarks_frame.loc[idx, 0]
@@ -122,21 +122,21 @@ class TrainDatasets(Dataset):
         pos_text = np.arange(1, text_length + 1)
         pos_mel = np.arange(1, mel_length + 1)
 
-        sample = {'text': text, 'text_length':text_length, 'mel_input':mel_input, 'mel_length':mel_length, 'pos_mel':pos_mel, 'pos_text':pos_text}
+        sample = {'text': text, 'text_length': text_length, 'mel_input': mel_input, 'mel_length': mel_length, 'pos_mel': pos_mel, 'pos_text': pos_text}
 
         return sample
 
-class TestDatasets(Dataset):                                                     
+
+class TestDatasets(Dataset):
     """
     Test dataset.
-    """                                                   
+    """
     def __init__(self, csv_file, hp, align=False, tts_filter=False):
-        """                                                                     
-        Args:                                                                   
-            csv_file (string): Path to the csv file with annotations.           
-            root_dir (string): Directory with all the wavs.                     
-                                                                                
-        """                                                                     
+        """
+        Args:
+            csv_file (string): Path to the csv file with annotations
+            root_dir (string): Directory with all the wavs
+        """
         # self.landmarks_frame = pd.read_csv(csv_file, sep='|', header=None)
         self.landmarks_frame = pd.read_csv(csv_file, sep='\|', header=None)
         self.align = align
@@ -150,8 +150,8 @@ class TestDatasets(Dataset):
             self.mean_value = np.load(self.hp.mean_file).reshape(-1, self.hp.lmfb_dim)
             self.var_value = np.load(self.hp.var_file).reshape(-1, self.hp.lmfb_dim)
 
-    def load_wav(self, filename):        
-        return librosa.load(filename, sr=hp.sample_rate) 
+    def load_wav(self, filename):
+        return librosa.load(filename, sr=self.hp.sample_rate)
 
     def load_htk(self, filename):
         fh = open(filename, "rb")
@@ -185,7 +185,7 @@ class TestDatasets(Dataset):
             mel_input -= self.mean_value
             mel_input /= np.sqrt(self.var_value)
 
-        mel_length = mel_input.shape[0] 
+        mel_length = mel_input.shape[0]
         pos_mel = np.arange(1, mel_length + 1)
 
         if self.align:
@@ -199,7 +199,7 @@ class TestDatasets(Dataset):
             text_length = len(text)
             pos_text = np.arange(1, text_length + 1)
 
-            sample = {'text': text, 'text_length':text_length, 'mel_input':mel_input, 'mel_length':mel_length, 'pos_mel':pos_mel, 'pos_text':pos_text, 'mel_name':mel_name}
+            sample = {'text': text, 'text_length': text_length, 'mel_input': mel_input, 'mel_length': mel_length, 'pos_mel': pos_mel, 'pos_text': pos_text, 'mel_name': mel_name}
 
         elif self.tts_filter:
             text = self.landmarks_frame.loc[idx, 1].strip()
@@ -210,14 +210,15 @@ class TestDatasets(Dataset):
             else:
                 text = np.array([int(t) for t in text.split(' ')], dtype=np.int32)
 
-            text_length = len(text)                
+            text_length = len(text)
             pos_text = np.arange(1, text_length + 1)
 
-            sample = {'text': text, 'text_length':text_length, 'mel_input':mel_input, 'mel_length':mel_length, 'pos_mel':pos_mel, 'pos_text':pos_text, 'mel_name':mel_name, 'text_raw':text_raw}
+            sample = {'text': text, 'text_length': text_length, 'mel_input': mel_input, 'mel_length': mel_length, 'pos_mel': pos_mel, 'pos_text': pos_text, 'mel_name': mel_name, 'text_raw': text_raw}
         else:
-            sample = {'mel_input':mel_input, 'mel_length':mel_length, 'pos_mel':pos_mel, 'mel_name':mel_name}
+            sample = {'mel_input': mel_input, 'mel_length': mel_length, 'pos_mel': pos_mel, 'mel_name': mel_name}
 
         return sample
+
 
 def collate_fn(batch):
     # Puts each data field into a tensor with outer dimension batch size
@@ -227,13 +228,13 @@ def collate_fn(batch):
         text_length = [d['text_length'] for d in batch]
         mel_length = [d['mel_length'] for d in batch]
         pos_mel = [d['pos_mel'] for d in batch]
-        pos_text= [d['pos_text'] for d in batch]
+        pos_text = [d['pos_text'] for d in batch]
 
-        text = [i for i,_ in sorted(zip(text, mel_length), key=lambda x: x[1], reverse=True)]
+        text = [i for i, _ in sorted(zip(text, mel_length), key=lambda x: x[1], reverse=True)]
         mel_input = [i for i, _ in sorted(zip(mel_input, mel_length), key=lambda x: x[1], reverse=True)]
         pos_text = [i for i, _ in sorted(zip(pos_text, mel_length), key=lambda x: x[1], reverse=True)]
         pos_mel = [i for i, _ in sorted(zip(pos_mel, mel_length), key=lambda x: x[1], reverse=True)]
-        text_length =[i for i, _ in sorted(zip(text_length, mel_length), key=lambda x: x[1], reverse=True)]
+        text_length = [i for i, _ in sorted(zip(text_length, mel_length), key=lambda x: x[1], reverse=True)]
         mel_length = sorted(mel_length, reverse=True)
         # PAD sequences with largest length of the batch
         text = _prepare_data(text).astype(np.int32)
@@ -244,6 +245,7 @@ def collate_fn(batch):
         return torch.LongTensor(text), torch.FloatTensor(mel_input), torch.LongTensor(pos_text), torch.LongTensor(pos_mel), torch.LongTensor(text_length), torch.LongTensor(mel_length)
 
     raise TypeError(("batch must contain tensors, numbers, dicts or lists; found {}".format(type(batch[0]))))
+
 
 def collate_fn_align(batch):
     # Puts each data field into a tensor with outer dimension batch size
@@ -265,6 +267,7 @@ def collate_fn_align(batch):
         return torch.LongTensor(text), torch.FloatTensor(mel_input), torch.LongTensor(pos_text), torch.LongTensor(pos_mel), torch.LongTensor(text_length), torch.LongTensor(mel_length), mel_name
 
     raise TypeError(("batch must contain tensors, numbers, dicts or lists; found {}".format(type(batch[0]))))
+
 
 def collate_fn_tts_filter(batch):
     # Puts each data field into a tensor with outer dimension batch size
@@ -288,6 +291,7 @@ def collate_fn_tts_filter(batch):
 
     raise TypeError(("batch must contain tensors, numbers, dicts or lists; found {}".format(type(batch[0]))))
 
+
 def collate_fn_test(batch):
     # Puts each data field into a tensor with outer dimension batch size
     if isinstance(batch[0], collections.abc.Mapping):
@@ -295,26 +299,23 @@ def collate_fn_test(batch):
         mel_length = [d['mel_length'] for d in batch]
         pos_mel = [d['pos_mel'] for d in batch]
 
-        text = _prepare_data(text).astype(np.int32)
         mel_input = _pad_mel(mel_input)
         pos_mel = _prepare_data(pos_mel).astype(np.int32)
-        pos_text = _prepare_data(pos_text).astype(np.int32)
 
         return torch.FloatTensor(mel_input), torch.LongTensor(pos_mel), torch.LongTensor(mel_length)
 
     raise TypeError(("batch must contain tensors, numbers, dicts or lists; found {}".format(type(batch[0]))))
 
+
 def _pad_data(x, length):
     _pad = 0
     return np.pad(x, (0, length - x.shape[0]), mode='constant', constant_values=_pad)
+
 
 def _prepare_data(inputs):
     max_len = max((len(x) for x in inputs))
     return np.stack([_pad_data(x, max_len) for x in inputs])
 
-def _pad_per_step(inputs):
-    timesteps = inputs.shape[-1]
-    return np.pad(inputs, [[0,0],[0,0],[0, hp.outputs_per_step - (timesteps % hp.outputs_per_step)]], mode='constant', constant_values=0.0)
 
 def get_param_size(model):
     params = 0
@@ -325,13 +326,15 @@ def get_param_size(model):
         params += tmp
     return params
 
+
 def _pad_mel(inputs):
     _pad = 0
     def _pad_one(x, max_len):
         mel_len = x.shape[0]
-        return np.pad(x, [[0,max_len - mel_len],[0,0]], mode='constant', constant_values=_pad)
+        return np.pad(x, [[0,m ax_len - mel_len], [0, 0]], mode='constant', constant_values=_pad)
     max_len = max((x.shape[0] for x in inputs))
     return np.stack([_pad_one(x, max_len) for x in inputs])
+
 
 class LengthsBatchSampler(Sampler):
     """
@@ -410,9 +413,9 @@ class NumBatchSampler(Sampler):
     def _batch_indices(self):
         batch_len = self.dataset_len // self.batch_size
         mod = self.dataset_len % self.batch_size
-        all_indices = np.arange(self.dataset_len-mod).reshape(batch_len, self.batch_size).tolist()
+        all_indices = np.arange(self.dataset_len - mod).reshape(batch_len, self.batch_size).tolist()
         if mod != 0:
-            remained = np.arange(self.dataset_len-mod, self.dataset_len).tolist()
+            remained = np.arange(self.dataset_len - mod, self.dataset_len).tolist()
             all_indices.append(remained)
 
         return all_indices
@@ -427,10 +430,12 @@ class NumBatchSampler(Sampler):
     def __len__(self):
         return len(self.all_indices)
 
+
 def get_dataset(script_file, hp, use_spec_aug):
     print(f'script_file = {script_file}')
     print(f'use_spec_aug = {use_spec_aug}')
     return TrainDatasets(script_file, hp, use_spec_aug=use_spec_aug)
+
 
 if __name__ == '__main__':
     datasets = get_dataset()
