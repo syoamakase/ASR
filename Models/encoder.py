@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import scipy
 import torch
@@ -7,52 +6,45 @@ import torch.nn.functional as F
 import torch.nn as nn
 import warnings
 
-from utils import hparams as hp
-
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# Use warning filter because lstm warning displays per iter. 
+# Use warning filter because lstm warning displays per iter
 warnings.simplefilter('ignore')
 
+
 class Encoder(nn.Module):
-    def __init__(self):
+    def __init__(self, hp):
         super(Encoder, self).__init__()
+        self.hp = hp
         if hp.frame_stacking > 1:
             input_size = hp.lmfb_dim * hp.frame_stacking
         elif hp.encoder_type == 'CNN':
             self.cnn_encoder = CNN_embedding(hp.lmfb_dim, 128)
-            input_size = hp.lmfb_dim//4 * 128
+            input_size = hp.lmfb_dim // 4 * 128
         else:
             input_size = hp.lmfb_dim * hp.frame_stacking
-        self.bi_lstm = nn.LSTM(input_size=input_size, hidden_size=hp.num_hidden_nodes_encoder, num_layers=hp.num_encoder_layer, \
-                batch_first=True, dropout=hp.encoder_dropout, bidirectional=True)
+        self.bi_lstm = nn.LSTM(input_size=input_size, hidden_size=hp.num_hidden_nodes_encoder, num_layers=hp.num_encoder_layer,
+                               batch_first=True, dropout=hp.encoder_dropout, bidirectional=True)
 
     def forward(self, x, lengths):
-        if hp.encoder_type == 'CNN':
+        if self.hp.encoder_type == 'CNN':
             x, lengths = self.cnn_encoder(x, lengths)
         total_length = x.shape[1]
-        x = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+        x = nn.utils.rnn.pack_padded_sequence(x, lengths.cpu(), batch_first=True, enforce_sorted=False)
         h, _ = self.bi_lstm(x)
         hbatch, lengths = nn.utils.rnn.pad_packed_sequence(h, batch_first=True, total_length=total_length)
         return hbatch
     
+
 class CNN_embedding(nn.Module):
     def __init__(self, idim, odim):
         super().__init__()
 
         self.conv1_1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1)
         self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
-        # self.batch_norm_1 = nn.BatchNorm2d(odim)
-        # self.layer_norm_1 = nn.LayerNorm(odim * idim)
         
         self.conv2_1 = torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
         self.conv2_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
-        # self.batch_norm_2 = nn.BatchNorm2d(odim)
         self.instance_norm = nn.InstanceNorm2d(128)
-        # self.pool_1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # self.pool_2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # self.dropout = nn.Dropout(0.2)
-
-        #self.out = nn.Linear(odim * idim, hp.num_hidden_nodes_encoder)
 
     def forward(self, x, x_length):
         x = x.unsqueeze(1)
@@ -65,19 +57,10 @@ class CNN_embedding(nn.Module):
         x = F.max_pool2d(x, 2, stride=2, ceil_mode=True)
         x = self.instance_norm(x)
         b, c, t, f = x.size()
-        x = x.transpose(1, 2).contiguous().view(b, t, c*f)
-        # x = self.layer_norm_1(x.transpose(1, 2).contiguous().view(b, t, c*f)).view(b, t, c, f).transpose(1, 2)
-        # x = self.conv_2(x)
-        # x = self.batch_norm_2(x)
-        # b, c, t, f = x.size()
-        # x = self.layer_norm_2(x.transpose(1, 2).contiguous().view(b, t, c*f))
-        # x = torch.relu(x)
-        # x = self.dropout(x)
-        # x = self.pool_1(x)
-        # x = self.pool_2(x)
-        #x = self.out(x)
+        x = x.transpose(1, 2).contiguous().view(b, t, c * f)
 
-        return x, torch.ceil(torch.ceil(x_length/2.0)/2.0)
+        return x, torch.ceil(torch.ceil(x_length / 2.0) / 2.0)
+
 
 class WaveEncoder(nn.Module):
     def __init__(self, hp):
