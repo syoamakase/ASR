@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import pandas as pd
 import numpy as np
 import librosa
@@ -9,7 +10,6 @@ from struct import unpack
 import torch
 from torch.utils.data import Dataset, DataLoader, Sampler
 import sentencepiece as spm
-
 
 class TrainDatasets(Dataset):
     """
@@ -331,7 +331,7 @@ def _pad_mel(inputs):
     _pad = 0
     def _pad_one(x, max_len):
         mel_len = x.shape[0]
-        return np.pad(x, [[0,m ax_len - mel_len], [0, 0]], mode='constant', constant_values=_pad)
+        return np.pad(x, [[0, max_len - mel_len], [0, 0]], mode='constant', constant_values=_pad)
     max_len = max((x.shape[0] for x in inputs))
     return np.stack([_pad_one(x, max_len) for x in inputs])
 
@@ -438,10 +438,21 @@ def get_dataset(script_file, hp, use_spec_aug):
 
 
 if __name__ == '__main__':
-    datasets = get_dataset()
-    sampler = LengthsBatchSampler(datasets, 58000, 'lengths.npy', True, True, False)
-    dataloader = DataLoader(datasets, batch_sampler=sampler, num_workers=4, collate_fn=collate_fn_transformer)
+    from utils import hparams as hp
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--hp_file', metavar='FILE', default='hparams.py')
+    parser.add_argument('--train_script', default=None)
+    args = parser.parse_args()
+
+    hp.configure(args.hp_file)
+    if args.train_script is not None:
+        hp.train_script = args.train_script
+    print(f'train script = {hp.train_script}')
+    datasets = TrainDatasets(hp.train_script, hp)
+    sampler = NumBatchSampler(datasets, hp.batch_size, True, True)
+    dataloader = DataLoader(datasets, batch_sampler=sampler, num_workers=4, collate_fn=collate_fn)
     from tqdm import tqdm
     pbar = tqdm(dataloader)
     for d in pbar:
-        print(d[1].shape)
+        pass
+        #print(d[1].shape)
