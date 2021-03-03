@@ -135,9 +135,9 @@ class Decoder(nn.Module):
         1. Add the candidate when the prediction is </s>
         """
         device = hbatch.device
-        import sentencepiece as spm
-        sp = spm.SentencePieceProcessor()
-        sp.Load(self.hp.spm_model)
+        #import sentencepiece as spm
+        #sp = spm.SentencePieceProcessor()
+        #sp.Load(self.hp.spm_model)
         batch_size = hbatch.shape[0]
         num_frames = hbatch.shape[1]
         e_mask = torch.ones((batch_size, num_frames, 1), device=device, requires_grad=False)
@@ -193,7 +193,7 @@ class Decoder(nn.Module):
                     tmpy = y.clone()
 
             best_scores, best_indices = tmpy.data.topk(beam_width, dim=1)
-            scores = cand_score + best_scores + 1
+            scores = cand_score + best_scores + 1 #0.5
             tmp_s = torch.zeros((beam_width, self.num_decoder_hidden_nodes), device=device)
             tmp_c = torch.zeros((beam_width, self.num_decoder_hidden_nodes), device=device)
 

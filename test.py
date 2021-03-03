@@ -61,8 +61,8 @@ def test_loop(model, test_set, model_lm):
         padded_sorted_xs, sorted_xs_lengths = frame_stacking(padded_sorted_xs, sorted_xs_lengths, hp.frame_stacking)
         pos_mel = torch.arange(1, sorted_xs_lengths[0] + 1).to(DEVICE).unsqueeze(0)
 
-        #results = model.decode_v2(padded_sorted_xs, sorted_xs_lengths, model_lm, pos_mel)
-        results = model.decode(padded_sorted_xs, sorted_xs_lengths, model_lm, pos_mel)
+        results = model.decode_v2(padded_sorted_xs, sorted_xs_lengths, model_lm, pos_mel)
+        #results = model.decode(padded_sorted_xs, sorted_xs_lengths, model_lm, pos_mel)
         if hp.spm_model:
             print(sp.DecodeIds(results), end='')
         else:
@@ -79,6 +79,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_script', type=str, default=None)
     parser.add_argument('--load_name_lm', type=str, default=None)
     parser.add_argument('--lm_weight', type=float, default=None)
+    parser.add_argument('--log_params', action='store_true')
     
     args = parser.parse_args()
     load_name = args.load_name
@@ -90,8 +91,8 @@ if __name__ == "__main__":
     #hp = utils.HParams()
     hp.configure(args.hp_file)
 
-    fill_variables()
-    overwrite_hparams(args)
+    fill_variables(hp, args.log_params)
+    overwrite_hparams(args, hp)
 
     if hp.decoder_type == 'Attention':
         model = AttModel(hp)

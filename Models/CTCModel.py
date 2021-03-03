@@ -3,8 +3,7 @@ import torch
 import torch.nn as nn
 
 from Models.encoder import Encoder, WaveEncoder
-from utils import hparams as hp
-
+#from utils import hparams as hp
 
 class CTCModel(nn.Module):
     def __init__(self, hp):
@@ -13,11 +12,11 @@ class CTCModel(nn.Module):
         if self.hp.encoder_type == 'Wave':
             self.encoder = WaveEncoder()
         else:
-            self.encoder = Encoder()
+            self.encoder = Encoder(hp)
         
         self.decoder = nn.Linear(self.hp.num_hidden_nodes * 2, self.hp.num_classes)
 
-    def forward(self, x, lengths, targets):
+    def forward(self, x, lengths, targets=None, pos_mel=None):
         hbatch = self.encoder(x, lengths)
         youtput = self.decoder(hbatch)
 
