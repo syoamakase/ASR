@@ -49,23 +49,17 @@ class TrainDatasets(Dataset):
     def __len__(self):
         return len(self.landmarks_frame)
 
-    def _freq_mask(self, spec, F=10, num_masks=1, replace_with_zero=False):
+    def _freq_mask(self, spec, F=10, num_masks=1, replace_with_zero=False, random_mask=False, granularity=1):
         cloned = spec.clone()
         num_mel_channels = cloned.shape[1]
-
-        for _ in range(0, num_masks):
-            f = random.randrange(0, F)
+        for i in range(0, num_masks):
+            f = random.randrange(0, F, granularity)
             f_zero = random.randrange(0, num_mel_channels - f)
-
             # avoids randrange error if values are equal and range is empty
-            if (f_zero == f_zero + f): return cloned
-
-            mask_end = random.randrange(f_zero, f_zero + f)
-            if (replace_with_zero):
-                cloned[:, f_zero:mask_end] = 0
-            else:
-                cloned[:, f_zero:mask_end] = cloned.mean()
-
+            if (f_zero == f_zero + f*granularity): return cloned
+            mask_end = random.randrange(f_zero, f_zero + f, granularity)
+            if (replace_with_zero): cloned[:, f_zero:mask_end] = 0
+            else: cloned[:, f_zero:mask_end] = cloned.mean()
         return cloned
 
     def _time_mask(self, spec, T=50, num_masks=1, replace_with_zero=False):
@@ -88,7 +82,12 @@ class TrainDatasets(Dataset):
 
     def __getitem__(self, idx):
         mel_name = self.landmarks_frame.loc[idx, 0]
-        text = self.landmarks_frame.loc[idx, 1].strip()
+        try:
+            text = self.landmarks_frame.loc[idx, 1].strip()
+        except AttributeError:
+            print(f'{idx} has error')
+            print(self.landmarks_frame.loc[idx])
+            exit(1)
 
         if self.hp.spm_model is not None:
             textids = [self.sp.bos_id()] + self.sp.EncodeAsIds(text)+ [self.sp.eos_id()]
@@ -96,7 +95,10 @@ class TrainDatasets(Dataset):
         else:
             text = np.array([int(t) for t in text.split(' ')], dtype=np.int32)
         if '.npy' in mel_name:
-            mel_input = np.load(mel_name)
+            try:
+                mel_input = np.load(mel_name)
+            except ValueError:
+                print(f'{mel_name} has error')
             assert mel_input.shape[0] == self.hp.lmfb_dim or mel_input.shape[1] == self.hp.lmfb_dim, '{} does not have strange shape {}'.format(mel_name, mel_input.shape)
             if mel_input.shape[1] != self.hp.lmfb_dim:
                 mel_input = mel_input.T
@@ -115,7 +117,7 @@ class TrainDatasets(Dataset):
             T = min(mel_input.shape[0] // 2 - 1, self.hp.max_width_T)
             #num_T = min(20, math.floor(0.04*mel_length))
             #T = math.floor(0.04*mel_length)
-            mel_input = self._time_mask(self._freq_mask(mel_input, F=self.hp.max_width_F, num_masks=self.hp.num_mask_F), T=T, num_masks=self.hp.num_mask_T, replace_with_zero=True)
+            mel_input = self._time_mask(self._freq_mask(mel_input, F=self.hp.max_width_F, num_masks=self.hp.num_mask_F, granularity=self.hp.granularity), T=T, num_masks=self.hp.num_mask_T, replace_with_zero=True)
             #mel_input = self._time_mask(self._freq_mask(mel_input, F=hp.spec_size_f, num_masks=2, replace_with_zero=True), T=T, num_masks=num_T, replace_with_zero=True)
         text_length = len(text)
         mel_length = mel_input.shape[0]

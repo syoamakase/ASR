@@ -12,6 +12,7 @@ from Models.CTCModel import CTCModel
 from Models.LM import Model_lm
 from utils import hparams as hp
 import utils
+import time
 from utils.utils import frame_stacking, load_dat, log_config, load_model, overwrite_hparams, fill_variables
 from text import text_to_sequence, sequence_to_text
 
@@ -36,6 +37,7 @@ def test_loop(model, test_set, model_lm):
         mean_value = 0
         var_value = 1
 
+    start_time = time.time()
     for i in range(len(test_set)):
         xs = []
         for j in range(batch_size):
@@ -71,6 +73,7 @@ def test_loop(model, test_set, model_lm):
                 #print(sequence_to_text(character), end='')
         print()
         sys.stdout.flush()
+    print(f'elapsed time = {time.time() - start_time}')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -104,6 +107,7 @@ if __name__ == "__main__":
         hp_LM = utils.HParams()
         hp_LM.configure(hp_LM_path)
         model_lm = Model_lm(hp_LM)
+        #model_lm = Model_lm_old()
         model_lm.to(DEVICE)
         model_lm.load_state_dict(load_model(hp.load_name_lm))
         model_lm.eval()

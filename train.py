@@ -15,14 +15,14 @@ from torch.utils.tensorboard import SummaryWriter
 from utils import hparams as hp
 from Models.AttModel import AttModel
 from Models.CTCModel import CTCModel
-from utils.utils import frame_stacking, log_config, load_model, adjust_learning_rate, fill_variables, get_transformer_learning_rate
+from utils.utils import frame_stacking, log_config, load_model, adjust_learning_rate, fill_variables, adjust_transformer_learning_rate
 from Loss.label_smoothing import label_smoothing_loss
+from load_waveform import load_waveform_model
 import datasets
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
-def train_loop(model, optimizer, writer, step, args, hp):
+def train_loop(model, optimizer, writer, step, args, hp) -> int:
     dataset_train = datasets.get_dataset(hp.train_script, hp, use_spec_aug=hp.use_spec_aug)
     if hp.encoder_type == 'Conformer':
         train_sampler = datasets.LengthsBatchSampler(dataset_train, hp.batch_size * 1500, hp.lengths_file)
@@ -34,9 +34,7 @@ def train_loop(model, optimizer, writer, step, args, hp):
     for d in dataloader:
         step += 1
         if hp.encoder_type == 'Conformer':
-            lr = get_transformer_learning_rate(step)
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = lr
+            lr = adjust_transformer_learning_rate(step)
             print(f'step = {step}')
             print(f'lr = {lr}')
         text, mel_input, pos_text, pos_mel, text_lengths, mel_lengths = d
@@ -58,9 +56,7 @@ def train_loop(model, optimizer, writer, step, args, hp):
             predict_ts = F.log_softmax(predict_ts, dim=2).transpose(0, 1)
             loss = F.ctc_loss(predict_ts, text, mel_lengths, text_lengths, blank=0)
 
-        # backward
         loss.backward()
-        # optimizer update
         if step % hp.accum_grad == 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), hp.clip)
             optimizer.step()
@@ -71,7 +67,7 @@ def train_loop(model, optimizer, writer, step, args, hp):
             print('loss is nan')
             sys.exit(1)
         if hp.debug_mode == 'tensorboard':
-            writer.add_scalar("Loss/train", loss, step)
+            #writer.add_scalar("Loss/train", loss, step)
             print('loss = {}'.format(loss.item()))
         else:
             print('loss = {}'.format(loss.item()))
@@ -79,7 +75,12 @@ def train_loop(model, optimizer, writer, step, args, hp):
         sys.stdout.flush()
     return step
 
-def train_epoch(model, optimizer, writer, args, hp, start_epoch=0):
+def train_epoch(model, optimizer, args, hp, start_epoch=0):
+    writer = None
+    if hp.load_wav_model:
+        model = load_waveform_model(model, hp.load_wav_model)
+        import pdb;pdb.set_trace()
+        print(f'{hp.load_wav_model} loaded')
     dataset_train = datasets.get_dataset(hp.train_script, hp, use_spec_aug=hp.use_spec_aug)
     train_sampler = DistributedSampler(dataset_train) if args.n_gpus > 1 else None
     dataloader = DataLoader(dataset_train, batch_size=hp.batch_size, shuffle=hp.shuffle, sampler=train_sampler,
@@ -93,8 +94,9 @@ def train_epoch(model, optimizer, writer, args, hp, start_epoch=0):
             torch.save(model.state_dict(), hp.save_dir + "/network.epoch{}".format(epoch + 1))
             torch.save(optimizer.state_dict(), hp.save_dir + "/network.optimizer.epoch{}".format(epoch + 1))
         if hp.encoder_type != 'Conformer':
-            adjust_learning_rate(optimizer, epoch + 1)
+            adjust_learning_rate(optimizer, epoch + 1, hp)
         if (epoch + 1) % hp.reset_optimizer_epoch == 0:
+        #if (epoch + 1) in hp.reset_optimizer_epoch == 0:
             if hp.encoder_type != 'Conformer':
                 optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
         print("EPOCH {} end".format(epoch + 1))
@@ -124,7 +126,6 @@ def run_distributed(fn, args, hp):
     except:
         cleanup()
 
-
 def run_training(rank, args, hp):
     if args.n_gpus > 1:
         init_distributed(rank, args.n_gpus)
@@ -142,7 +143,7 @@ def run_training(rank, args, hp):
     if hp.encoder_type == 'Conformer':
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.98), eps=1e-9)
     else:
-        optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
+        optimizer = torch.optim.Adam(model.parameters(), lr=hp.lr, weight_decay=1e-5)
 
     load_epoch = 0
     if hp.load_checkpoints:
@@ -158,14 +159,11 @@ def run_training(rank, args, hp):
         model.load_state_dict(load_model(os.path.join(hp.load_checkpoints_path, 'network.epoch{}'.format(load_epoch))))
         if hp.is_flatstart:
             load_epoch = 0
+            #pass
         else:
             optimizer.load_state_dict(torch.load(os.path.join(hp.load_checkpoints_path, 'network.optimizer.epoch{}'.format(load_epoch))))
 
-    if hp.debug_mode == 'tensorboard':
-        writer = SummaryWriter(f'{hp.save_dir}/logs/{hp.comment}')
-
-    train_epoch(model, optimizer, writer, args, hp, start_epoch=load_epoch)
-
+    train_epoch(model, optimizer, args, hp, start_epoch=load_epoch)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -175,8 +173,9 @@ if __name__ == "__main__":
     hp.configure(args.hp_file)
     fill_variables(hp)
     os.makedirs(hp.save_dir, exist_ok=True)
+    writer = SummaryWriter(f'{hp.save_dir}/logs/{hp.comment}')
 
-    log_config()
+    log_config(hp)
 
     n_gpus = torch.cuda.device_count()
     args.__setattr__('n_gpus', n_gpus)

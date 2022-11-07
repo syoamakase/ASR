@@ -256,6 +256,13 @@ class Decoder(nn.Module):
         best_idx = beam_results['score'].argmax()
         length = beam_results['length'][best_idx]
         results = beam_results['result'][best_idx][:length].cpu().tolist()
+        attention = beam_results['alpha'][best_idx, :length]
+
+        import matplotlib.pyplot as plt
+        import sentencepiece as spm
+        sp = spm.SentencePieceProcessor()
+        sp.Load(self.hp.spm_model)
+        #self._plot_attention(attention, results)
 
         return results
     
@@ -270,3 +277,13 @@ class Decoder(nn.Module):
         c_next = (forgetgate * c) + (ingate * cellgate)
         h = outgate * torch.tanh(c_next)
         return h, c_next
+
+    def _plot_attention(self, attention, label=None):
+        import matplotlib.pyplot as plt
+        import sentencepiece as spm
+        attention = attention.cpu().numpy()
+        sp = spm.SentencePieceProcessor()
+        sp.Load(self.hp.spm_model)
+        import pdb; pdb.set_trace()
+        return 
+        

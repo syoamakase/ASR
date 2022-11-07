@@ -450,6 +450,17 @@ class TransformerEncoder(nn.Module):
         e_outputs, attn_enc = self.encoder(src, src_mask)
         return e_outputs
 
+class TransformerTextEncoder(nn.Module):
+    def __init__(self, src_vocab, d_model, N_e, heads, dropout):
+        super().__init__()
+        self.encoder = Encoder(d_model, N_e, heads, dropout)
+
+    def forward(self, src, src_pos):
+        src_mask = (src_pos != 0).unsqueeze(-2)
+        #src, src_mask = self.cnn_encoder(src, src_mask)
+        e_outputs, attn_enc = self.encoder(src, src_mask)
+        return e_outputs
+
 
 def nopeak_mask(size):
     """
@@ -486,6 +497,6 @@ def get_learning_rate(step):
 
 
 if __name__ == '__main__':
-    model = TransformerEncoder(80, 256, 16, 4, 0.1)
+    model = TransformerEncoder(80, 256, 12, 4, 0.1)
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     print('params = {0:.2f}M'.format(pytorch_total_params / 1000 / 1000))
