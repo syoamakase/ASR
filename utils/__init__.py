@@ -5,7 +5,7 @@ from importlib.util import spec_from_file_location, module_from_spec
 from pathlib import Path
 from typing import Union
 
-class __HParams:
+class HParams:
     def __init__(self, path: Union[str, Path]=None):
         if path is None:
             self._configured = False
@@ -13,10 +13,10 @@ class __HParams:
             self.configure(path)
 
     def __getattr__(self, item):
-        print(item)
-        if not self.is_configured():
-            raise AttributeError("HParams not configured yet. Call self.configure()")
-        else:
+        #if not self.is_configured():
+        #    raise AttributeError("HParams not configured yet. Call self.configure()")
+        #else:
+        #    return super().__getattr__(item)
             return super().__getattr__(item)
 
     def configure(self, path: Union[str, Path]):
@@ -46,7 +46,7 @@ class __HParams:
     def is_configured(self):
         return self._configured
 
-hparams = __HParams()
+hparams = HParams()
 
 def _import_from_file(name, path: Path):
     """Programmatically returns a module object from a filepath"""
